@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  rewrite.override: |
+    # Add rewrite rules for Conduktor Gateway SNI routing on subdomain per broker instance that redirect to the external service
+    rewrite name regex (.+).conduktor-gateway-external.conduktor.svc.cluster.local conduktor-gateway-external.conduktor.svc.cluster.local answer auto
+    
+    # Add rewrite rule to allow Keycloak OIDC ingress to be resolved by the internal DNS for Console
+    rewrite name regex oidc.localhost keycloak.cdk-deps.svc.cluster.local answer auto

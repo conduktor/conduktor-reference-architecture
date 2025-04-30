@@ -1,0 +1,47 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: main-postgresql
+  namespace: default
+spec:
+  repo: https://charts.bitnami.com/bitnami
+  chart: postgresql
+  version: 16.6.0
+  targetNamespace: cdk-deps
+  createNamespace: true
+  set:
+    global.postgresql.auth.database: conduktor
+    global.postgresql.auth.postgresPassword: conduktor
+    auth.postgresPassword: conduktor
+    primary.persistence.size: 1Gi
+    volumePermissions.enabled: "true"
+    tls.enabled: "true"
+    tls.certificatesSecret: "pg-main-crt-secret"
+    tls.certFilename: "tls.crt"
+    tls.certKeyFilename: "tls.key"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: sql-postgresql
+  namespace: default
+spec:
+  repo: https://charts.bitnami.com/bitnami
+  chart: postgresql
+  version: 16.6.0
+  targetNamespace: cdk-deps
+  createNamespace: true
+  set:
+    global.postgresql.auth.database: conduktor
+    global.postgresql.auth.postgresPassword: conduktor
+    auth.postgresPassword: conduktor
+    primary.persistence.size: 1Gi
+    volumePermissions.enabled: "true"
+    tls.enabled: "true"
+    tls.certificatesSecret: "pg-sql-crt-secret"
+    tls.certFilename: "tls.crt"
+    tls.certKeyFilename: "tls.key"

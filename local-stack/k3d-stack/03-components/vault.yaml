@@ -1,0 +1,24 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+---
+######
+##  Vault
+#####
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: vault
+  namespace: default
+spec:
+  repo: https://helm.releases.hashicorp.com
+  chart: vault
+  version: 0.30.0
+  targetNamespace: cdk-deps
+  createNamespace: true
+  set:
+    server.dev.enabled: "true"
+    server.dev.devRootToken: "conduktor-vault-token"
+    server.postStart[0]: "/bin/sh"
+    server.postStart[1]: "-c"
+    server.postStart[2]: "sleep 5 && vault secrets enable transit && vault secrets enable -version=1 kv && vault secrets enable totp"

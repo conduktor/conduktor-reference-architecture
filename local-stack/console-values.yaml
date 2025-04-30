@@ -1,0 +1,170 @@
+
+######
+# Console configuration
+######
+config:
+  platform:
+    https:
+      existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
+
+  # Secrets with license, admin user and database credentials
+  existingSecret: "console-secrets"
+  database:
+    host: "main-postgresql.cdk-deps.svc.cluster.local"
+    port: 5432
+    name: "conduktor"
+  kafkasql:
+    refresh_user_permissions_every_in_sec: 3600
+    database:
+      host: "sql-postgresql.cdk-deps.svc.cluster.local"
+      port: 5432
+      name: "conduktor"
+      username: "conduktor"
+  audit_log_publisher:
+    cluster: "gateway-cluster"
+    topicName: "console-auditlog"
+  monitoring:
+    use_aggregated_metrics: true
+    enable_non_aggregated_metrics: false
+
+  clusters: [] # Clusters managed through API using Terraform in this example
+
+  sso:
+    oauth2:
+      - name: "keycloak"
+        default: true
+        client-id: "${SSO_CLIENT_ID}"
+        client-secret: "${SSO_CLIENT_SECRET}"
+        groups-claim: "groups"
+        openid:
+          issuer: https://oidc.localhost/realms/conduktor-realm
+
+  metadataIndexer:
+    indexerTimeout: 30
+    clusterParallelism: 20
+
+platform:
+  replicaCount: 2
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 0.5
+      memory: 1Gi
+  extraEnvVars:
+    - name: CDK_ROOT_LOG_FORMAT
+      value: "JSON"
+
+    # Provide trust store for SSL connections (PG,OIDC,Kafka,SR,...)
+    - name: CDK_SSL_TRUSTSTORE_PATH
+      value: "/opt/conduktor/ssl/truststore.jks"
+    - name: CDK_SSL_TRUSTSTORE_TYPE
+      value: "jks"
+
+  extraVolumes:
+    # SSL volume that provide truststore.jks for SSL connections
+    - name: ssl
+      secret:
+        secretName: bundle-truststore
+
+  extraVolumeMounts:
+    # SSL volume that provide truststore.jks for SSL connections
+    - name: ssl
+      mountPath: /opt/conduktor/ssl
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    runAsUser: 10001
+    runAsGroup: 0
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    grafana:
+      enabled: true
+      folder: "Conduktor"
+      labels:
+        grafana_dashboard: "1" # for grafana sidecar auto-discovery
+      namespace: "monitoring"
+      datasources:
+        prometheus: prometheus
+
+serviceAccount:
+  create: true
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hostname: console.conduktor.localhost
+  tls: true
+  annotations:
+    # SSL passthrough for TLS termination on the Console container
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+
+    # OR Ingress TLS termination that use Cert manager to generate TLS certificates
+    #cert-manager.io/cluster-issuer: local-ca-issuer
+    #kubernetes.io/ingress.class: nginx
+
+
+######
+# Console Cortex monitoring configuration
+######
+monitoringConfig:
+  # Secrets with S3 credentials
+  existingSecret: "console-cortex-secrets"
+  scraper:
+    skipSSLCheck: false # Console CA automatically mounted from config.platform.https.existingSecret
+  storage:
+    s3:
+      endpoint: "s3-minio.cdk-deps.svc.cluster.local:9000" # Internal endpoint
+      bucket: "conduktor-monitoring"
+      insecure: true # TODO use TLS
+
+platformCortex:
+  enabled: true
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 0.5
+      memory: 0.5Gi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    runAsUser: 10001
+    runAsGroup: 0
+    fsGroup: 0
+
+
+# TODO enable TLS on S3 endpoint
+#  extraVolumes:
+#    - name: cortex-config-override
+#      configMap:
+#       name: conduktor-console-cortex-config
+#  extraVolumeMounts:
+#    - name: cortex-config-override
+#      subPath: cortex.yaml # key in configmap to use as file contents
+#      mountPath: /opt/override-configs/cortex.yaml # path to file in Cortex container
+
+#extraDeploy:
+#    - apiVersion: v1
+#      kind: ConfigMap
+#      metadata:
+#        name: conduktor-console-cortex-config
+#        namespace: conduktor
+#      data:
+#        cortex.yaml: |
+#          blocks_storage:
+#            tsdb:
+#              retention_period: 24h
+#            s3:
+#              http:
+#                insecure_skip_verify: true

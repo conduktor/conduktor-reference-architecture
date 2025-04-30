@@ -1,0 +1,55 @@
+# Install base infrastructure like Ingress Controller and Cert Manager
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ingress-nginx
+  namespace: default
+spec:
+  helmVersion: v3
+  repo: https://kubernetes.github.io/ingress-nginx
+  chart: ingress-nginx
+  version: 4.12.0
+  targetNamespace: ingress-nginx
+  set:
+   controller.extraArgs.enable-ssl-passthrough: "true" # https://kubernetes.github.io/ingress-nginx/user-guide/tls/#ssl-passthrough
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  repo: https://charts.jetstack.io
+  chart: cert-manager
+  targetNamespace: cert-manager
+  version: v1.17.0
+  set:
+    crds.enabled: "true"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: trust-manager
+  namespace: cert-manager
+spec:
+  repo: https://charts.jetstack.io
+  chart: trust-manager
+  version: v0.16.0
+  targetNamespace: cert-manager
+  set:
+    crds.enabled: "true"
+    secretTargets.enabled: "true"
+    secretTargets.authorizedSecretsAll: "true" # for local example only
+#---
+#apiVersion: helm.cattle.io/v1
+#kind: HelmChart
+#metadata:
+#  name: confluent
+#  namespace: default
+#spec:
+#  repo: https://packages.confluent.io/helm
+#  chart: confluent-for-kubernetes
+#  version: 0.1193.1
+#  targetNamespace: confluent
+#  createNamespace: true

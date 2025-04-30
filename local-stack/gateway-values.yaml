@@ -1,0 +1,109 @@
+gateway:
+  replicas: 3
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 0.5
+      memory: 1Gi
+
+  secretRef: "gateway-secrets"
+  env:
+    # Gateway server general configuration
+    LOG4J2_APPENDER_LAYOUT: "json"
+    #LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
+
+    #### Backend kafka configuration
+    ##
+    GATEWAY_UPSTREAM_CONNECTION_POOL_TYPE: "ROUND_ROBIN" # multiplexing optimization
+    KAFKA_BOOTSTRAP_SERVERS: "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
+    KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    KAFKA_SASL_MECHANISM: "PLAIN"
+
+    # Truststore for Gateway kafka client -> Kafka brokers
+    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/truststore/truststore.jks
+    KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
+
+    #### Gateway Kafka proxy configuration for clients
+    ##
+    GATEWAY_ADVERTISED_HOST: "conduktor-gateway-external.conduktor.svc.cluster.local"
+
+    # SNI routing configuration
+    GATEWAY_ROUTING_MECHANISM: host
+    GATEWAY_ADVERTISED_SNI_PORT: "9092"
+    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "conduktor-gateway-external.conduktor.svc.cluster.local"
+    GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
+    #LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
+
+    GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
+    GATEWAY_ACL_ENABLED: "true"
+    GATEWAY_SUPER_USERS: "console-sa" # service account that will be created through API after
+
+    # Keystore for Gateway SSL Kafka server
+#    GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
+    GATEWAY_SSL_KEY_TYPE: "JKS"
+
+    # Gateway HTTP API
+    # Gateway HTTPS configuration
+    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    # Truststore for mTLS authentication of Gateway clients
+    #GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+
+  volumes:
+    # Mount truststore secrets for kafka and http client
+    - name: truststore
+      secret:
+        secretName: bundle-truststore # secret with truststore.jks containing kafka and schema registry certificates
+
+  volumeMounts:
+    # Mount truststore secrets for kafka and http client
+    - name: truststore
+      mountPath: /etc/conduktor/tls/truststore
+      readOnly: true
+
+  portRange:
+    start: 9092
+    count: 1
+  admin:
+    port: 8888
+    securedMetrics: false
+
+service:
+  external:
+    enable: true
+    type: LoadBalancer
+    admin: true
+
+# Mount keystore for TLS
+tls:
+  enable: true
+  secretRef: "gateway-tls-secret"
+  keystoreKey: keystore.jks
+  keystoreFile: keystore.jks
+
+metrics:
+  prometheus:
+    enable: true
+  grafana:
+    enable: true
+    folder: "Conduktor"
+    labels:
+      grafana_dashboard: "1" # for grafana sidecar auto-discovery
+    namespace: "monitoring"
+    datasources:
+      prometheus: prometheus
+      loki: loki
+
+# Expose API through an ingress with ssl passthrough
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hostname: gateway.conduktor.localhost
+  tls: true
+  extraTls:
+    - hosts:
+        - gateway.conduktor.localhost
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS

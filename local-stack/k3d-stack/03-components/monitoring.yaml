@@ -1,0 +1,39 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+---
+######
+##  Prometheus & Grafana
+#####
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  repo: https://prometheus-community.github.io/helm-charts
+  chart: kube-prometheus-stack
+  version: 70.3.0
+  targetNamespace: monitoring
+  createNamespace: true
+  set:
+    prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues: "false"
+    prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues: "false"
+    alertmanager.enabled: "true"
+    grafana.enabled: "false"
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: grafana-operator
+  namespace: default
+spec:
+  repo: https://charts.bitnami.com/bitnami
+  chart: grafana-operator
+  version: 4.9.0
+  targetNamespace: monitoring
+  createNamespace: true
+  set:
+    operator.namespaceScope: "false"
+    operator.watchNamespace: ""
+    grafana.enabled: "false"

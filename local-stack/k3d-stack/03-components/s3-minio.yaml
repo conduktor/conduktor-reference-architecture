@@ -1,0 +1,29 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: s3
+  namespace: default
+spec:
+  repo: https://charts.min.io/
+  chart: minio
+  targetNamespace: cdk-deps
+  createNamespace: true
+  version: 5.4.0
+  set:
+    mode: standalone
+    rootUser: admin
+    rootPassword: conduktor
+    replicas: 1
+    resources.requests.memory: 512Mi
+    buckets[0].name: conduktor-monitoring
+    buckets[0].policy: none
+    buckets[0].purge: "false"
+    persistence.enabled: "false"
+    tls.enabled: "false" # TODO enable TLS
+    tls.certSecret: "s3-crt-secret"
+    tls.publicCrt: "tls.crt"
+    tls.privateKey: "tls.key"

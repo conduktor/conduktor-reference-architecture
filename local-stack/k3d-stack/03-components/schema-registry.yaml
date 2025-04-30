@@ -1,0 +1,140 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sr-jks-password
+  namespace: cdk-deps
+type: Opaque
+data:
+  password: Y29uZHVrdG9y # conduktor
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sr-crt
+  namespace: cdk-deps
+spec:
+  isCA: false
+  secretName: sr-crt-secret
+  subject:
+    organizations:
+      - schemaregistry
+  commonName: schemaregistry.cdk-deps.svc.cluster.local
+  dnsNames:
+    - schemaregistry.cdk-deps.svc.cluster.local
+  issuerRef:
+    name: local-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: sr-jks-password
+        key: password
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: schemaregistry
+  namespace: cdk-deps
+spec:
+  serviceName: schemaregistry
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schemaregistry
+  template:
+    metadata:
+      labels:
+        app: schemaregistry
+    spec:
+      containers:
+        - name: schemaregistry
+          image: confluentinc/cp-schema-registry:7.8.0
+#          command:
+#            - sleep
+#          args:
+#            - infinity
+          ports:
+            - containerPort: 8081
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/schema-registry
+            - name: sr-certs
+              mountPath: /etc/schema-registry/secrets/sr-tls
+            - name: kafka-certs
+              mountPath: /etc/schema-registry/secrets/kafka-tls
+          env:
+            - name: SCHEMA_REGISTRY_HOST_NAME
+              value: "schemaregistry"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+              value: "SASL_SSL://kafka.cdk-deps.svc.cluster.local:9092"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL
+              value: "SASL_SSL"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM
+              value: "PLAIN"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION
+              value: "/etc/schema-registry/secrets/kafka-tls/kafka.truststore.jks"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG
+              value: "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='kafka-admin-password';"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD
+              value: "conduktor"
+#            - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION
+#              value: "/etc/schema-registry/secrets/kafka-tls/kafka.keystore.jks"
+#            - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD
+#              value: "conduktor"
+#            - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_KEY_PASSWORD
+#              value: "conduktor"
+            - name: SCHEMA_REGISTRY_LISTENERS
+              value: "https://0.0.0.0:8081"
+            - name: SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL
+              value: "https"
+            - name: SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION
+              value: "/etc/schema-registry/secrets/sr-tls/truststore.jks"
+            - name: SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD
+              value: "conduktor"
+            - name: SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION
+              value: "/etc/schema-registry/secrets/sr-tls/keystore.jks"
+            - name: SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD
+              value: "conduktor"
+            - name: SCHEMA_REGISTRY_SSL_KEY_PASSWORD
+              value: "conduktor"
+            - name: SCHEMA_REGISTRY_AUTH_TYPE
+              value: "BASIC"
+            - name: SCHEMA_REGISTRY_AUTH_REALM
+              value: "SchemaRegistryRealm"
+            - name: SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE
+              value: "USER_INFO"
+            - name: SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO
+              value: "sc-user:sr-password"
+      volumes:
+        - name: config-volume
+          emptyDir: {}
+        - name: sr-certs
+          secret:
+            secretName: sr-crt-secret
+        - name: kafka-certs
+          secret:
+            secretName: sr-kafka-bundle-truststore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schemaregistry
+  namespace: cdk-deps
+spec:
+  selector:
+    app: schemaregistry
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP
