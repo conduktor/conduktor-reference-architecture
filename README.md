@@ -40,7 +40,7 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 - **Storage**: 
   - Conduktor **Console** container don't require persistent storage and only use volumes for settings and some startup logs. So default ephemeral storage with at least 2Go size is enough.
-  - Conduktor **Gateway** container don't require persistent storage by default except if using Large Message/Batch handling interceptor that use local storage volume to cache data. In this case, use a fast local storage with at least 50Go size. // CHECKME
+  - Conduktor **Gateway** container don't require persistent storage by default except if using Large Message/Batch handling interceptor that use local storage volume to cache data. In this case, use a fast storage sized for the volume of data you want to cache.
   - Conduktor **Console Cortex** container use a local storage as hot cache before offloading metrics segments to configured **object storage**. So default ephemeral storage with at least 10Go size is enough.
 - **Database**: Use a managed PostgreSQL database with high availability and backups. For self-hosted databases, use a PostgreSQL cluster with replication and backups.
   - Console main database should start with a minimum of 10Go size and can be increased based on usage (number of users/groups/Kafka clusters, topics and consumer groups).
