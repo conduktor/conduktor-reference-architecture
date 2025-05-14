@@ -1,7 +1,34 @@
+## Architecture change suggestions
+- should use consistent login credentials to cs playground
+- LICENSE is not included in the secrets. We should do sed or something to get that variable inserted
+- host separator should be "-" like the default since this is what customers will do
+- should use oathbearer for client -> gw since this is what customers will do
+- should use gateway provider for kafkacluster if we are going to use console to connect to gateway at all
+- should also include a kafkacluster that bypasses gateway
+
+retrieve truststore
+```
+kubectl get secret bundle-truststore -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > truststore.jks
+```
+
+```
+export KAFKA_OPTS="-Djava.security.manager=allow"
+```
+
+create client properties
+```
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username='console-sa' password='<token>';
+ssl.truststore.location=./truststore.jks
+ssl.truststore.password=conduktor
+```
+
 ## installation issues
 
 - need kubectl 1.33+
 - helm repo update on `make install-conduktor-platform`
+- timeouts not long enough
 
 ## console tls issues
 ```
@@ -10,6 +37,8 @@ Error: execution error at (console/templates/console/ingress.yaml:58:14): Ingres
 - ingress.secrets with existing TLS secret or one to create 
 - ingress.annotations for cert-manager
 ```
+
+I decided to disable TLS passthrough for Console since this is likely what customers will do
 
 ## terraform issues
 

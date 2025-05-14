@@ -11,8 +11,6 @@ provider "conduktor" {
   alias          = "console"
   mode           = "console"
   base_url       = var.console_base_url
-  // had to manually generate api token for this to work
-  // api_token      = "1NJeZ+42874=.Uh8pbn4SwEQebRUSV1QIUPiaPLWzp5rZ7Txkhf7mabM4h6b3cDMbGk3Q+LT1NzpeAyd34GbkBz8AgDtZXy05yosVNVq6+E/1Z9Oft/sUmHY680nibUV6noE2T0dRpPv07BL4yKCgY9u6yySiu9Mus1fACNXCuPUi711mk4+AXtMjhai9+IEVAIfT5kN/2HJ7lxQp/vwHWWJliAVslKfAwL7QBkzNzFiz8VUsjcPhigAvPdMeny33sQNP4W1/S71YLqO7XA3FckpUHqxHkEHvniDS/QG/AWy+dMhlSkpHjoai15VtPbT/o6viM9Gz0+WgJv+Wg3A3eaYoOGzMpH8HnQ=="
   admin_user     = var.console_admin_user
   admin_password = var.console_admin_password
   insecure       = true
@@ -88,6 +86,44 @@ resource "conduktor_console_kafka_cluster_v2" "gateway" {
     bootstrap_servers = var.bootstrap_servers
     properties = {
       "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='console-sa' password='${conduktor_gateway_token_v2.console_sa_token.token}';"
+      "security.protocol" = "SASL_SSL"
+      "sasl.mechanism"    = "PLAIN"
+    }
+    kafka_flavor = {
+      gateway = {
+        url                          = "https://conduktor-gateway-external.conduktor.svc.cluster.local:8888"
+        user                         = var.gateway_admin_user
+        password                     = var.gateway_admin_password
+        virtual_cluster              = "passthrough"
+        # ignore_untrusted_certificate = true
+      }
+    }
+    schema_registry = {
+      confluent_like = {
+        url                          = var.schema_registry_url
+        ignore_untrusted_certificate = false
+        security = {
+          basic_auth = {
+            username = var.schema_registry_user
+            password = var.schema_registry_password
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "conduktor_console_kafka_cluster_v2" "kafka" {
+  provider = conduktor.console
+  name     = "kafka-cluster"
+  labels = {
+    "env" = "prod"
+  }
+  spec = {
+    display_name      = "Kafka Cluster"
+    bootstrap_servers = "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
+    properties = {
+      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='kafka-admin-password';"
       "security.protocol" = "SASL_SSL"
       "sasl.mechanism"    = "PLAIN"
     }

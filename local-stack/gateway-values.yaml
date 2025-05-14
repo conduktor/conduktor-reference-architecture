@@ -25,7 +25,7 @@ gateway:
 
     #### Gateway Kafka proxy configuration for clients
     ##
-    GATEWAY_ADVERTISED_HOST: "conduktor-gateway-external.conduktor.svc.cluster.local"
+    GATEWAY_ADVERTISED_HOST: "gateway.conduktor.localhost" # external hostname of the gateway
 
     # SNI routing configuration
     GATEWAY_ROUTING_MECHANISM: host
@@ -102,6 +102,31 @@ ingress:
   extraTls:
     - hosts:
         - gateway.conduktor.localhost
+  extraRules:
+    - host: gateway.conduktor.localhost
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: conduktor-gateway-external
+                port:
+                  number: 9092
+          - path: /admin
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: conduktor-gateway-external
+                port:
+                  number: 8888
+          - path: /gateway/v2
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: conduktor-gateway-external
+                port:
+                  number: 8888
   annotations:
     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
