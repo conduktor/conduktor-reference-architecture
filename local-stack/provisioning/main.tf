@@ -11,6 +11,8 @@ provider "conduktor" {
   alias          = "console"
   mode           = "console"
   base_url       = var.console_base_url
+  // had to manually generate api token for this to work
+  // api_token      = "1NJeZ+42874=.Uh8pbn4SwEQebRUSV1QIUPiaPLWzp5rZ7Txkhf7mabM4h6b3cDMbGk3Q+LT1NzpeAyd34GbkBz8AgDtZXy05yosVNVq6+E/1Z9Oft/sUmHY680nibUV6noE2T0dRpPv07BL4yKCgY9u6yySiu9Mus1fACNXCuPUi711mk4+AXtMjhai9+IEVAIfT5kN/2HJ7lxQp/vwHWWJliAVslKfAwL7QBkzNzFiz8VUsjcPhigAvPdMeny33sQNP4W1/S71YLqO7XA3FckpUHqxHkEHvniDS/QG/AWy+dMhlSkpHjoai15VtPbT/o6viM9Gz0+WgJv+Wg3A3eaYoOGzMpH8HnQ=="
   admin_user     = var.console_admin_user
   admin_password = var.console_admin_password
   insecure       = true

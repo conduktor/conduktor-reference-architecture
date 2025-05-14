@@ -1,7 +1,9 @@
+## installation issues
+
 - need kubectl 1.33+
 - helm repo update on `make install-conduktor-platform`
 
-
+## console tls issues
 ```
 Error: execution error at (console/templates/console/ingress.yaml:58:14): Ingress TLS enabled require one of : 
 - ingress.selfSigned 
@@ -9,22 +11,22 @@ Error: execution error at (console/templates/console/ingress.yaml:58:14): Ingres
 - ingress.annotations for cert-manager
 ```
 
-```
-k get ingress -n conduktor 
-NAME                CLASS   HOSTS                         ADDRESS        PORTS     AGE
-conduktor-console   nginx   console.conduktor.localhost   192.168.97.2   80, 443   13m
-conduktor-gateway   nginx   gateway.conduktor.localhost   192.168.97.2   80, 443   39m
-```
+## terraform issues
 
 ```
-curl -k -u admin:conduktor https://192.168.97.2/health
-<html>
-<head><title>404 Not Found</title></head>
-<body>
-<center><h1>404 Not Found</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
+make init-conduktor-platform
 ```
 
-Same 404 not found with console in browser
+│ Error: Client Error
+│ 
+│   with conduktor_console_group_v2.admin,
+│   on main.tf line 29, in resource "conduktor_console_group_v2" "admin":
+│   29: resource "conduktor_console_group_v2" "admin" {
+│ 
+│ Unable to create group, got error: Invalid token.
+
+## Kafka issues
+
+- k3d doesn't map 9092
+- ingress doesn't have routing rule for 9092
+- gateway advertised host is incorrect if you want to serve traffic from outside of kubernetes
