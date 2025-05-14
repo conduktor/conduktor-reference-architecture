@@ -3,9 +3,9 @@
 # Console configuration
 ######
 config:
-  platform:
-    https:
-      existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
+  # platform:
+  #   https:
+  #     existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
 
   # Secrets with license, admin user and database credentials
   existingSecret: "console-secrets"
@@ -100,6 +100,8 @@ ingress:
   ingressClassName: nginx
   hostname: console.conduktor.localhost
   tls: true
+  secrets:
+    - name: console.conduktor.localhost-tls
   annotations:
     # SSL passthrough for TLS termination on the Console container
     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
@@ -108,8 +110,8 @@ ingress:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
 
     # OR Ingress TLS termination that use Cert manager to generate TLS certificates
-    #cert-manager.io/cluster-issuer: local-ca-issuer
-    #kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: local-ca-issuer
+    # kubernetes.io/ingress.class: nginx
 
 
 ######
