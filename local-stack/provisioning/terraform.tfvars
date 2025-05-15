@@ -6,7 +6,7 @@ gateway_base_url          = "https://gateway.conduktor.localhost"
 gateway_admin_user        = "admin"
 gateway_admin_password    = "adminP4ss!"
 
-bootstrap_servers         = "brokermain0.conduktor-gateway-external.conduktor.svc.cluster.local:9092,brokermain1.conduktor-gateway-external.conduktor.svc.cluster.local:9092,brokermain2.conduktor-gateway-external.conduktor.svc.cluster.local:9092"
+bootstrap_servers         = "gateway.conduktor.localhost:9092"
 
 gateway_token_lifetime_seconds = 2630000  # 1 month
 

@@ -17,9 +17,6 @@ ports:
   - port: 9092:9092
     nodeFilters:
       - loadbalancer
-  - port: 8888:8888
-    nodeFilters:
-      - loadbalancer
 options:
   k3d:
     wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)

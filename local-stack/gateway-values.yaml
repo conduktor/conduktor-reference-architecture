@@ -30,7 +30,7 @@ gateway:
     # SNI routing configuration
     GATEWAY_ROUTING_MECHANISM: host
     GATEWAY_ADVERTISED_SNI_PORT: "9092"
-    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "conduktor-gateway-external.conduktor.svc.cluster.local"
+    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
     GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
     #LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
 

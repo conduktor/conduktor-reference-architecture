@@ -47,7 +47,9 @@ then install both Conduktor Console and Gateway latest helm charts using [`conso
 ## 3. Access Conduktor platform
 Add the following line to your `/etc/hosts` file :
 ```
-127.0.0.1 console.conduktor.localhost gateway.conduktor.localhost oidc.localhost
+127.0.0.1 console.conduktor.localhost oidc.localhost
+127.0.0.1 gateway.conduktor.localhost
+127.0.0.1 brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
 ```
 You can then access Conduktor Console at [https://console.conduktor.localhost](https://console.conduktor.localhost) and Conduktor Gateway at [https://gateway.conduktor.localhost](https://gateway.conduktor.localhost).
 
