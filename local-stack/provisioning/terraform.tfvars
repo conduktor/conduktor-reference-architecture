@@ -18,3 +18,5 @@ schema_registry_password  = "sr-password"
 
 gateway_truststore_location = "/etc/conduktor/tls/truststore/truststore.jks"
 gateway_truststore_password = "conduktor"
+
+kafka_password              = "kafka-admin-password"

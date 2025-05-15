@@ -126,7 +126,7 @@ resource "conduktor_console_kafka_cluster_v2" "kafka" {
     display_name      = "Kafka Cluster"
     bootstrap_servers = "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
     properties = {
-      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='kafka-admin-password';"
+      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='${var.kafka_password}';"
       "security.protocol" = "SASL_SSL"
       "sasl.mechanism"    = "PLAIN"
     }
