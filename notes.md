@@ -1,12 +1,11 @@
 ## Architecture change suggestions
 - should use consistent login credentials to cs playground
-- LICENSE is not included in the secrets. We should do sed or something to get that variable inserted
 - host separator should be "-" like the default since this is what customers will do
 - should use oathbearer for client -> gw since this is what customers will do
 - should use gateway provider for kafkacluster if we are going to use console to connect to gateway at all
 - should also include a kafkacluster that bypasses gateway
 
-retrieve truststore
+retrieve truststore for local kafka client
 ```
 kubectl get secret bundle-truststore -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > truststore.jks
 ```
@@ -23,6 +22,20 @@ sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule require
 ssl.truststore.location=./truststore.jks
 ssl.truststore.password=conduktor
 ```
+
+Run kafka client from outside world
+```
+kafka-broker-api-versions \                      
+    --bootstrap-server gateway.conduktor.localhost:9092 \
+    --command-config client.properties | grep 9092
+```
+
+Port forward grafana to take a look at the dashboards, or alternatively expose with ingress
+
+```
+kubectl port-forward svc/grafana-service -n monitoring 3000:3000
+```
+Log in with `admin` and `admin` for username, password.
 
 ## installation issues
 
