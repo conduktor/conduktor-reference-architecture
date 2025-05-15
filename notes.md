@@ -27,7 +27,7 @@ ssl.truststore.password=conduktor
 ## installation issues
 
 - need kubectl 1.33+
-- helm repo update on `make install-conduktor-platform`
+- need helm repo update on `make install-conduktor-platform`
 - timeouts not long enough
 
 ## console tls issues
@@ -54,8 +54,13 @@ make init-conduktor-platform
 │ 
 │ Unable to create group, got error: Invalid token.
 
+I had to `unset CDK_API_KEY` since I had that variable set from a different demo.
+Would be useful to tell the user to try this if they are having authentication issues since env vars supercede tfvars.
+
 ## Kafka issues
 
 - k3d doesn't map 9092
 - ingress doesn't have routing rule for 9092
 - gateway advertised host is incorrect if you want to serve traffic from outside of kubernetes
+
+Now all fixed in this branch.
