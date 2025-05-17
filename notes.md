@@ -111,3 +111,59 @@ Error:
 ```
 JWT processing failed. Additional details: [[17] Unexpected exception encountered while processing JOSE object (java.lang.NullPointerException: Cannot invoke \"java.util.Collection.iterator()\" because \"jsonWebKeys\" is null)
 ```
+
+If I get a token myself with curl
+```
+curl -X POST https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/token \  -d "grant_type=client_credentials" \
+  -d "client_id=app-1" \
+  -d "client_secret=app-1-secret" \
+  -d "scope=email" -k | jq
+```
+
+I get back a token that looks like this:
+
+```json
+{
+  "exp": 1747476546,
+  "iat": 1747476246,
+  "jti": "trrtcc:f202323d-6ee0-4028-b581-53cb8a27ddd6",
+  "iss": "https://oidc.localhost/realms/conduktor-realm",
+  "aud": "account",
+  "sub": "2e7bf75a-9e2f-4074-bdd9-15f0f242ef73",
+  "typ": "Bearer",
+  "azp": "app-1",
+  "acr": "1",
+  "realm_access": {
+    "roles": [
+      "offline_access",
+      "default-roles-conduktor-realm",
+      "uma_authorization",
+      "blah"
+    ]
+  },
+  "resource_access": {
+    "account": {
+      "roles": [
+        "manage-account",
+        "manage-account-links",
+        "view-profile"
+      ]
+    }
+  },
+  "scope": "microprofile-jwt email groups profile",
+  "upn": "service-account-app-1",
+  "email_verified": false,
+  "clientHost": "10.42.0.14",
+  "groups": [
+    "offline_access",
+    "default-roles-conduktor-realm",
+    "uma_authorization",
+    "blah"
+  ],
+  "preferred_username": "service-account-app-1",
+  "clientAddress": "10.42.0.14",
+  "client_id": "app-1"
+}
+```
+
+The claims all look good to me. Why is Jose giving me a null pointer exception?

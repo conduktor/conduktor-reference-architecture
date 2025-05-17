@@ -10,8 +10,8 @@ gateway:
   env:
     # Gateway server general configuration
     LOG4J2_APPENDER_LAYOUT: "json"
-    LOG4J2_ORG_APACHE_KAFKA_LEVEL: debug
-    LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
+    # LOG4J2_ORG_APACHE_KAFKA_LEVEL: debug
+    # LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
 
     #### Backend kafka configuration
     ##
@@ -33,15 +33,15 @@ gateway:
     GATEWAY_ADVERTISED_SNI_PORT: "9092"
     GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
     GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
-    LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
+    # LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
 
     GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
     GATEWAY_ACL_ENABLED: "true"
-    GATEWAY_SUPER_USERS: "console-sa;kafka-client" # service account that will be created through API after
+    GATEWAY_SUPER_USERS: "console-sa;app-1" # service account that will be created through API after
     GATEWAY_OAUTH_JWKS_URL: "https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
-    GATEWAY_OAUTH_SUB_CLAIM_NAME: "clientId"
+    GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
 
     # Keystore for Gateway SSL Kafka server
 #    GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
