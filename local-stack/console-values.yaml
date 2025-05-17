@@ -100,9 +100,7 @@ ingress:
   enabled: true
   ingressClassName: nginx
   hostname: console.conduktor.localhost
-  tls: true
-  # secrets:
-  #   - name: console.conduktor.localhost-tls # Secret with TLS certificate tls.crt and tls.key PEMs
+  tls: true # Set to false if you need SSL passthrough to the Console server
   annotations:
     # Ingress TLS termination that use Cert manager to generate TLS certificates
     cert-manager.io/cluster-issuer: local-ca-issuer
