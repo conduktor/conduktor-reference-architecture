@@ -571,6 +571,46 @@ data:
         ]
       },
       "clients": [
+      {
+          "id": "kafka-client",
+          "clientId": "kafka-client",
+          "protocolMappers": [
+            {
+              "name": "client id",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-hardcoded-claim-mapper",
+              "consentRequired": false,
+              "config": {
+                "claim.name": "clientId",
+                "claim.value": "kafka-client",
+                "jsonType.label": "String",
+                "id.token.claim": "true",
+                "access.token.claim": "true"
+              }
+            }
+          ],
+          "name": "Application 1",
+          "enabled": true,
+          "clientAuthenticatorType": "client-secret",
+          "secret": "client-secret",
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "serviceAccountsEnabled": true,
+          "standardFlowEnabled": false,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": false,
+          "authorizationServicesEnabled": false,
+          "attributes": {
+            "access.token.lifespan": "3600"
+          },
+          "defaultClientScopes": [
+            "web-origins",
+            "acr",
+            "roles",
+            "profile",
+            "email"
+          ]
+        },
         {
           "id": "c35e91a7-7bea-4974-b18f-d70b7090a366",
           "clientId": "account",

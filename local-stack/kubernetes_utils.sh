@@ -27,7 +27,7 @@ checkKubeContext() {
 waitSecretCreated() {
   namespace=$1
   resource=$2
-  timeout=90
+  timeout=180
   interval=5
   start=$(date +%s)
   end=$((start + timeout))
@@ -45,7 +45,7 @@ waitSecretCreated() {
 waitAvailable() {
   namespace=$1
   resource=$2
-  timeout=90
+  timeout=180
   interval=5
   start=$(date +%s)
   end=$((start + timeout))
@@ -62,7 +62,7 @@ waitAvailable() {
 waitRollout() {
   namespace=$1
   resource=$2
-  timeout=90
+  timeout=180
   interval=5
   start=$(date +%s)
   end=$((start + timeout))

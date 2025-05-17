@@ -25,7 +25,7 @@ ssl.truststore.password=conduktor
 
 Run kafka client from outside world
 ```
-kafka-broker-api-versions \                      
+kafka-broker-api-versions \
     --bootstrap-server gateway.conduktor.localhost:9092 \
     --command-config client.properties | grep 9092
 ```
@@ -77,3 +77,37 @@ Would be useful to tell the user to try this if they are having authentication i
 - gateway advertised host is incorrect if you want to serve traffic from outside of kubernetes
 
 Now all fixed in this branch.
+
+## OAuthbearer issues
+
+for some reason, I need to explicitly set truststore in kafka opts even though it's already in client.properties. Or else I get cert chain path error.
+```
+export KAFKA_OPTS="-Djava.security.manager=allow \
+-Djavax.net.ssl.trustStore=./truststore.jks \
+-Djavax.net.ssl.trustStorePassword=conduktor \
+-Djavax.net.ssl.trustStoreType=JKS"
+```
+
+On Gateway, I also had to enable a bunch of truststores so GW would trust oidc provider. Not sure which were necessary or unnecessary.
+
+Run kafka client.
+```
+kafka-broker-api-versions --bootstrap-server gateway.conduktor.localhost:9092 --command-config client.properties
+```
+
+Error:
+```
+Exception in thread "main" org.apache.kafka.common.errors.SaslAuthenticationException: {"status":"invalid_token"}
+```
+
+On the gw side:
+
+```
+k logs -f -n conduktor services/conduktor-gateway-external | grep -i sasl | grep -i oauth | jq
+```
+
+Error:
+
+```
+JWT processing failed. Additional details: [[17] Unexpected exception encountered while processing JOSE object (java.lang.NullPointerException: Cannot invoke \"java.util.Collection.iterator()\" because \"jsonWebKeys\" is null)
+```

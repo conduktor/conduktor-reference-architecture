@@ -4,10 +4,6 @@ terraform {
       source  = "conduktor/conduktor"
       version = "0.4.1"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.0"
-    }
   }
 }
 
@@ -171,24 +167,4 @@ resource "conduktor_gateway_interceptor_v2" "interceptor_data_quality_avro" {
       action = "BLOCK"
     })
   }
-}
-
-
-locals {
-  client_properties = join("\n", concat(
-    [
-      for key, value in conduktor_console_kafka_cluster_v2.gateway.spec.properties :
-      "${key}=${value}"
-    ],
-    [
-      "ssl.truststore.location=./truststore.jks",
-      "ssl.truststore.password=${var.gateway_truststore_password}",
-    ]
-  ))
-}
-
-
-resource "local_file" "client_properties" {
-  content  = local.client_properties
-  filename = "${path.module}/../client.properties"
 }
