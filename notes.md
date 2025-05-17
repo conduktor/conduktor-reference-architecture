@@ -167,3 +167,19 @@ I get back a token that looks like this:
 ```
 
 The claims all look good to me. Why is Jose giving me a null pointer exception?
+
+Keycloak debug logs:
+
+```
+2025-05-17 16:19:34,226 DEBUG [org.keycloak.transaction.JtaTransactionWrapper] (executor-thread-1) JtaTransactionWrapper end. Request Context: HTTP POST /realms/conduktor-realm/protocol/openid-connect/token
+2025-05-17 16:19:34,226 DEBUG [org.keycloak.events] (executor-thread-1) type="CLIENT_LOGIN", realmId="ce670a60-7052-4beb-af09-90582e3893bc", realmName="conduktor-realm", clientId="app-1", userId="6144464d-bc04-4231-99e7-bc0b700311b8", ipAddress="10.42.0.14", token_id="trrtcc:7efd5479-258c-4e44-8f02-69dfcda52bbc", grant_type="client_credentials", scope="email groups profile", client_auth_method="client-secret", username="service-account-app-1", authSessionParentId="66d2db47-0912-4722-a7ae-0707200264fb", authSessionTabId="Mh8sytBFanA"
+```
+
+Curl to oidc.localhost from within the gateway pod fails, but to `keycloak.cdk-deps.svc.cluster.local` succeeds. The CoreDNS rewrite is supposed to do this.
+
+```
+kubectl exec -it -n conduktor deploy/conduktor-gateway -- curl -k "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
+```
+Need the `-k`, so maybe Gateway truststore is the culprit?
+
+Yep, needed to supply truststore at JVM level with JAVA_TOOL_OPTIONS.

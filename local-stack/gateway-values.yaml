@@ -38,10 +38,14 @@ gateway:
     GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
     GATEWAY_ACL_ENABLED: "true"
     GATEWAY_SUPER_USERS: "console-sa;app-1" # service account that will be created through API after
-    GATEWAY_OAUTH_JWKS_URL: "https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/certs"
+    GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
     GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
+    JAVA_TOOL_OPTIONS: >-
+      -Djavax.net.ssl.trustStore=/etc/conduktor/tls/truststore/truststore.jks
+      -Djavax.net.ssl.trustStorePassword=conduktor
+      -Djavax.net.ssl.trustStoreType=JKS
 
     # Keystore for Gateway SSL Kafka server
 #    GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
