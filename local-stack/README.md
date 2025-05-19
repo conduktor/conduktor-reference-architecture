@@ -26,17 +26,23 @@ Components installed :
 - Terraform
 - [Yq](https://mikefarah.gitbook.io/yq) v4.x
 - Conduktor License in `LICENSE` environment variable set.
+- Kafka CLI commands (e.g. `brew install kafka`)
 
-## 1. Create cluster with base components
+## Create cluster with base components
 
 To create and start the local environment, run the following commands :
 ```bash
 make start-local-stack
 ```
 It will create a K3d cluster named k3d-conduktor-platform-p75 and install base components (Ingress controller, Cert-manager, Monitoring stack, Postgresql databases, Kafka cluster, Vault).
-Kubectl context should be created. To use it run `kubectl config use-context k3d-conduktor-platform-p75`.
+Kubectl context should be created. To use it, run 
 
-## 2. Deploy Conduktor platform
+```
+kubectl config use-context k3d-conduktor-platform-p75
+```
+
+## Deploy Conduktor platform
+
 Then, to install Conduktor Console and Gateway, run the following commands :
 ```bash
 make install-conduktor-platform
@@ -44,14 +50,29 @@ make install-conduktor-platform
 It will deploy [`console-secrets`](local-stack/console-secrets.yaml) and [`gateway-secrets`](local-stack/gateway-secrets.yaml) into `conduktor` namespace and
 then install both Conduktor Console and Gateway latest helm charts using [`console-values`](local-stack/console-values.yaml) and [`gateway-values`](local-stack/console-values.yaml) files.
 
-## 3. Access Conduktor platform
-Add the following line to your `/etc/hosts` file :
+
+## Provision Conduktor platform using terraform
+
+To provision the Conduktor platform using terraform, run the following commands :
+```bash
+make init-conduktor-platform
+```
+Provisioning create resources inside Conduktor Console and Gateway.
+
+## Access Conduktor platform
+Add the following line to your `/etc/hosts` file in order to resolve hostnames:
+
 ```
 127.0.0.1 console.conduktor.localhost oidc.localhost
 127.0.0.1 gateway.conduktor.localhost
 127.0.0.1 brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
 ```
-You can then access Conduktor Console at [https://console.conduktor.localhost](https://console.conduktor.localhost) and Conduktor Gateway at [https://gateway.conduktor.localhost](https://gateway.conduktor.localhost).
+
+k3d picks up data from localhost (127.0.0.1) on ports 443 and 9092. The Ingresses we deploy will route to services based on these hostnames.
+
+### Conduktor Console
+
+You can then access Conduktor Console at [https://console.conduktor.localhost](https://console.conduktor.localhost) 
 
 You can then login using the following credentials :
 
@@ -62,19 +83,54 @@ You can then login using the following credentials :
 | sso (keycloak) | alice / alice@company.io                     | alice      | project-a |
 | sso (keycloak) | bob / alice@company.io                       | bob        | project-b |     
 
+You will be able to create topics and otherwise interact with both Kafka Cluster and Conduktor Gateway.
+
+The connection to Conduktor Gateway uses SASL PLAIN with a credential generated earlier in the previous step.
+
+### Conduktor Gateway
+
+You can reach the Conduktor Gateway Admin API at [https://gateway.conduktor.localhost](https://gateway.conduktor.localhost).
+
+```bash
+curl -k -u admin:adminP4ss! \
+    'https://gateway.conduktor.localhost/gateway/v2/interceptor'
+```
+
+You can reach Kafka through Gateway using SASL OAuthbearer (see client.properties file). Here we assume `kafka-topics` is installed locally.
+
+```
+# Need to set truststore at the JVM level to authenticate with OIDC
+export KAFKA_OPTS="-Djava.security.manager=allow \
+-Djavax.net.ssl.trustStore=./truststore.jks \
+-Djavax.net.ssl.trustStorePassword=conduktor \
+-Djavax.net.ssl.trustStoreType=JKS"
+```
+
+```
+kafka-topics --list \
+    --bootstrap-server gateway.conduktor.localhost:9092 \
+    --command-config client.properties
+```
+
+### Identity Provider
+
 You can also manage OIDC keycloak server at [https://oidc.localhost](https://oidc.localhost) with the following credentials `admin` / `conduktor`.
 
-## 4. Provision Conduktor platform using terraform
+### Grafana Dashboards
 
-To provision the Conduktor platform using terraform, run the following commands :
-```bash
-make init-conduktor-platform
+Port forward grafana to take a look at the dashboards.
+
 ```
-Provisioning create resources inside Conduktor Console and Gateway.
+kubectl port-forward svc/grafana-service -n monitoring 3000:3000
+```
 
-## 5. Destroy Conduktor platform local stack
+Go to [http://localhost:3000](http://localhost:3000) and log in with `admin` and `admin` for username, password to explore the dashboards that ship with the Conduktor helm charts.
 
-To destroy the Conduktor platform, run the following commands :
+Press `Ctrl+C` to kill the port forward.
+
+## Destroy Conduktor platform local stack
+
+To destroy the Conduktor platform, run the following command:
 ```bash
 make stop-local-stack
 ```

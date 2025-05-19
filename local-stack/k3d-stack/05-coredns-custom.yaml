@@ -9,4 +9,4 @@ data:
     rewrite name regex .*gateway\.conduktor\.localhost conduktor-gateway-external.conduktor.svc.cluster.local answer auto
     
     # Add rewrite rule to allow Keycloak OIDC ingress to be resolved by the internal DNS for Console
-    rewrite name regex oidc.localhost keycloak.cdk-deps.svc.cluster.local answer auto
+    rewrite name regex oidc\.localhost keycloak.cdk-deps.svc.cluster.local answer auto
