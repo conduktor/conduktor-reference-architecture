@@ -51,9 +51,9 @@ gateway:
 
     # Gateway HTTP API
     # Gateway HTTPS configuration
-    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    # GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     # Truststore for mTLS authentication of Gateway clients
-    GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
 
   volumes:
     # Mount truststore secrets for kafka and http client
@@ -106,20 +106,10 @@ ingress:
   ingressClassName: nginx
   hostname: gateway.conduktor.localhost
   tls: true
-  extraTls:
-    - hosts:
-        - gateway.conduktor.localhost
   extraRules:
     - host: gateway.conduktor.localhost
       http:
         paths:
-          - path: /
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: conduktor-gateway-external
-                port:
-                  number: 9092
           - path: /admin
             pathType: ImplementationSpecific
             backend:
@@ -128,14 +118,19 @@ ingress:
                 port:
                   number: 8888
           - path: /gateway/v2
-            pathType: ImplementationSpecific
+            pathType: Prefix
             backend:
               service:
                 name: conduktor-gateway-external
                 port:
                   number: 8888
   annotations:
-    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    # Ingress TLS termination that use Cert manager to generate TLS certificates
+    cert-manager.io/cluster-issuer: local-ca-issuer
+    kubernetes.io/ingress.class: nginx
+
+    # Or if you need SSL passthrough for TLS termination on the Console container, use these instead:
+    # nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # ingress.kubernetes.io/ssl-passthrough: "true"
+    # nginx.ingress.kubernetes.io/backend-protocol: HTTPS
