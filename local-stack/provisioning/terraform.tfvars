@@ -1,7 +1,7 @@
 # This file contains sensitive credentials and would of course be excluded from
 #   version control in a real-world scenario.
 console_base_url          = "https://console.conduktor.localhost"
-console_admin_user        = "admin@company.io"
+console_admin_user        = "admin@demo.dev"
 console_admin_password    = "adminP4ss!"
 
 gateway_base_url          = "https://gateway.conduktor.localhost"

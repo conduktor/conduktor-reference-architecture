@@ -78,7 +78,7 @@ You can then login using the following credentials :
 
 | Account Type   | Username                                     | Password   | Groups    | 
 |----------------|----------------------------------------------|------------|-----------|
-| local          | admin@company.io                             | adminP4ss! | admin     |
+| local          | admin@demo.dev                               | adminP4ss! | admin     |
 | sso (keycloak) | conduktor-admin / conduktor-admin@company.io | conduktor  | admin     |
 | sso (keycloak) | alice / alice@company.io                     | alice      | project-a |
 | sso (keycloak) | bob / alice@company.io                       | bob        | project-b |     

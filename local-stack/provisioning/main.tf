@@ -33,7 +33,7 @@ resource "conduktor_console_group_v2" "admin" {
     display_name = "admin"
     description  = "Built-in group with admin level access"
     external_groups = ["conduktor-admin"]
-    members : ["admin@company.io"]
+    members : ["admin@demo.dev"]
   }
 
   lifecycle {
