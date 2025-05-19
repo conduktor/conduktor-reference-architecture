@@ -8,10 +8,12 @@ gateway:
 
   secretRef: "gateway-secrets"
   env:
-    # Gateway server general configuration
-    LOG4J2_APPENDER_LAYOUT: "json"
+    # # Gateway server general configuration
+    # LOG4J2_APPENDER_LAYOUT: "json"
     # LOG4J2_ORG_APACHE_KAFKA_LEVEL: debug
     # LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
+    # LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing and other network issues
+
 
     #### Backend kafka configuration
     ##
@@ -33,7 +35,6 @@ gateway:
     GATEWAY_ADVERTISED_SNI_PORT: "9092"
     GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
     GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
-    # LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
 
     GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
     GATEWAY_ACL_ENABLED: "true"
@@ -44,15 +45,17 @@ gateway:
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
     GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
 
-    # Keystore for Gateway SSL Kafka server
-#    GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
+    # # Keystore for Gateway TLS certificate
+    # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
     GATEWAY_SSL_KEY_TYPE: "JKS"
-    GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
 
-    # Gateway HTTP API
-    # Gateway HTTPS configuration
+    # # Truststore for mTLS authentication of Gateway clients
+    # GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
+
+    # # Gateway HTTP API
+    # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
     # GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
-    # Truststore for mTLS authentication of Gateway clients
+    # # Truststore for mTLS authentication of Gateway clients
     # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
 
   volumes:
