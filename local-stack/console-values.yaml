@@ -4,6 +4,9 @@
 ######
 config:
   platform:
+    external:
+      # External URL for Console, useful when behind a proxy to fix SSO issues
+      url: "https://console.conduktor.localhost"
     https:
       existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
 

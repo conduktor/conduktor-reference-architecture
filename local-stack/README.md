@@ -28,6 +28,17 @@ Components installed :
 - Conduktor License in `LICENSE` environment variable set.
 - Kafka CLI commands (e.g. `brew install kafka`)
 
+## Create DNS entries
+Add the following lines to your `/etc/hosts` file in order to resolve hostnames:
+
+```
+127.0.0.1 console.conduktor.localhost
+127.0.0.1 oidc.localhost
+127.0.0.1 gateway.conduktor.localhost brokermain.gateway.conduktor.localhost brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
+```
+
+k3d will pick up data from localhost (127.0.0.1) on ports 443 and 9092. The Ingresses we deploy will route to services based on these hostnames.
+
 ## Create cluster with base components
 
 To create and start the local environment, run the following commands :
@@ -58,17 +69,6 @@ To provision the Conduktor platform using terraform, run the following commands 
 make init-conduktor-platform
 ```
 Provisioning create resources inside Conduktor Console and Gateway.
-
-## Access Conduktor platform
-Add the following lines to your `/etc/hosts` file in order to resolve hostnames:
-
-```
-127.0.0.1 console.conduktor.localhost
-127.0.0.1 oidc.localhost
-127.0.0.1 gateway.conduktor.localhost brokermain.gateway.conduktor.localhost brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
-```
-
-k3d picks up data from localhost (127.0.0.1) on ports 443 and 9092. The Ingresses we deploy will route to services based on these hostnames.
 
 ### Conduktor Console
 
