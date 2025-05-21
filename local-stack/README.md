@@ -60,12 +60,12 @@ make init-conduktor-platform
 Provisioning create resources inside Conduktor Console and Gateway.
 
 ## Access Conduktor platform
-Add the following line to your `/etc/hosts` file in order to resolve hostnames:
+Add the following lines to your `/etc/hosts` file in order to resolve hostnames:
 
 ```
-127.0.0.1 console.conduktor.localhost oidc.localhost
-127.0.0.1 gateway.conduktor.localhost
-127.0.0.1 brokermain.gateway.conduktor.localhost brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
+127.0.0.1 console.conduktor.localhost
+127.0.0.1 oidc.localhost
+127.0.0.1 gateway.conduktor.localhost brokermain.gateway.conduktor.localhost brokermain0.gateway.conduktor.localhost brokermain1.gateway.conduktor.localhost brokermain2.gateway.conduktor.localhost
 ```
 
 k3d picks up data from localhost (127.0.0.1) on ports 443 and 9092. The Ingresses we deploy will route to services based on these hostnames.
