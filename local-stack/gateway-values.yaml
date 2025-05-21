@@ -54,7 +54,7 @@ gateway:
 
     # # Gateway HTTP API
     # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
-    # GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     # # Truststore for mTLS authentication of Gateway clients
     # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
 
@@ -103,37 +103,15 @@ metrics:
       prometheus: prometheus
       loki: loki
 
-# Expose API through an ingress with ssl passthrough
+# Expose admin REST API through an ingress
 ingress:
   enabled: true
   ingressClassName: nginx
   hostname: gateway.conduktor.localhost
   tls: true
-  extraRules:
-    - host: gateway.conduktor.localhost
-      http:
-        paths:
-          - path: /admin
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: conduktor-gateway-external
-                port:
-                  number: 8888
-          - path: /gateway/v2
-            pathType: Prefix
-            backend:
-              service:
-                name: conduktor-gateway-external
-                port:
-                  number: 8888
   annotations:
-    # Ingress TLS termination that use Cert manager to generate TLS certificates
     cert-manager.io/cluster-issuer: local-ca-issuer
     kubernetes.io/ingress.class: nginx
-
-    # Or if you need SSL passthrough for TLS termination on the Console container, use these instead:
-    # nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    # ingress.kubernetes.io/ssl-passthrough: "true"
-    # nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    # redirect TLS traffic directly to the Gateway container to handle TLS handshake
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"

@@ -91,7 +91,7 @@ resource "conduktor_console_kafka_cluster_v2" "gateway" {
     }
     kafka_flavor = {
       gateway = {
-        url                          = "http://conduktor-gateway-external.conduktor.svc.cluster.local:8888"
+        url                          = "https://conduktor-gateway-external.conduktor.svc.cluster.local:8888"
         user                         = var.gateway_admin_user
         password                     = var.gateway_admin_password
         virtual_cluster              = "passthrough"
