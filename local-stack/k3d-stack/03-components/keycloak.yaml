@@ -571,6 +571,7 @@ data:
         ]
       },
       "clients": [
+        {"clientId": "app-1", "enabled": true, "protocol": "openid-connect", "publicClient": false, "secret": "app-1-secret", "serviceAccountsEnabled": true, "authorizationServicesEnabled": false},
         {
           "id": "c35e91a7-7bea-4974-b18f-d70b7090a366",
           "clientId": "account",

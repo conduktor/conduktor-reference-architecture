@@ -4,6 +4,9 @@
 ######
 config:
   platform:
+    external:
+      # External URL for Console, useful when behind a proxy to fix SSO issues
+      url: "https://console.conduktor.localhost"
     https:
       existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
 
@@ -101,15 +104,12 @@ ingress:
   hostname: console.conduktor.localhost
   tls: true
   annotations:
-    # SSL passthrough for TLS termination on the Console container
-    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    cert-manager.io/cluster-issuer: local-ca-issuer
+    kubernetes.io/ingress.class: nginx
+    # redirect TLS traffic directly to the Console container to handle TLS handshake
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
-    # OR Ingress TLS termination that use Cert manager to generate TLS certificates
-    #cert-manager.io/cluster-issuer: local-ca-issuer
-    #kubernetes.io/ingress.class: nginx
 
 
 ######

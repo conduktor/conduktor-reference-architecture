@@ -167,6 +167,7 @@ spec:
   commonName: console.conduktor.localhost
   dnsNames:
     - console.conduktor.localhost
+    - conduktor-console.conduktor.svc.cluster.local
   issuerRef:
     name: local-ca-issuer
     kind: ClusterIssuer

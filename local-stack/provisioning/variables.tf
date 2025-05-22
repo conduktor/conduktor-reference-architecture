@@ -67,3 +67,9 @@ variable "gateway_truststore_password" {
   type        = string
   sensitive   = true
 }
+
+variable "kafka_password" {
+  description = "Password for the Kafka user"
+  type        = string
+  sensitive   = true
+}

@@ -33,7 +33,7 @@ resource "conduktor_console_group_v2" "admin" {
     display_name = "admin"
     description  = "Built-in group with admin level access"
     external_groups = ["conduktor-admin"]
-    members : ["admin@company.io"]
+    members : [var.console_admin_user]
   }
 
   lifecycle {
@@ -86,6 +86,43 @@ resource "conduktor_console_kafka_cluster_v2" "gateway" {
     bootstrap_servers = var.bootstrap_servers
     properties = {
       "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='console-sa' password='${conduktor_gateway_token_v2.console_sa_token.token}';"
+      "security.protocol" = "SASL_SSL"
+      "sasl.mechanism"    = "PLAIN"
+    }
+    kafka_flavor = {
+      gateway = {
+        url                          = "https://conduktor-gateway-external.conduktor.svc.cluster.local:8888"
+        user                         = var.gateway_admin_user
+        password                     = var.gateway_admin_password
+        virtual_cluster              = "passthrough"
+      }
+    }
+    schema_registry = {
+      confluent_like = {
+        url                          = var.schema_registry_url
+        ignore_untrusted_certificate = false
+        security = {
+          basic_auth = {
+            username = var.schema_registry_user
+            password = var.schema_registry_password
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "conduktor_console_kafka_cluster_v2" "kafka" {
+  provider = conduktor.console
+  name     = "kafka-cluster"
+  labels = {
+    "env" = "prod"
+  }
+  spec = {
+    display_name      = "Kafka Cluster"
+    bootstrap_servers = "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
+    properties = {
+      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='${var.kafka_password}';"
       "security.protocol" = "SASL_SSL"
       "sasl.mechanism"    = "PLAIN"
     }

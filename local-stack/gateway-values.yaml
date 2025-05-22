@@ -8,9 +8,12 @@ gateway:
 
   secretRef: "gateway-secrets"
   env:
-    # Gateway server general configuration
-    LOG4J2_APPENDER_LAYOUT: "json"
-    #LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
+    # # Gateway server general configuration
+    # LOG4J2_APPENDER_LAYOUT: "json"
+    # LOG4J2_ORG_APACHE_KAFKA_LEVEL: debug
+    # LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
+    # LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing and other network issues
+
 
     #### Backend kafka configuration
     ##
@@ -25,28 +28,35 @@ gateway:
 
     #### Gateway Kafka proxy configuration for clients
     ##
-    GATEWAY_ADVERTISED_HOST: "conduktor-gateway-external.conduktor.svc.cluster.local"
+    GATEWAY_ADVERTISED_HOST: "gateway.conduktor.localhost" # external hostname of the gateway
 
     # SNI routing configuration
     GATEWAY_ROUTING_MECHANISM: host
     GATEWAY_ADVERTISED_SNI_PORT: "9092"
-    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "conduktor-gateway-external.conduktor.svc.cluster.local"
+    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
     GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
-    #LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing
 
     GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
     GATEWAY_ACL_ENABLED: "true"
-    GATEWAY_SUPER_USERS: "console-sa" # service account that will be created through API after
+    # console-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
+    GATEWAY_SUPER_USERS: "console-sa;app-1"
+    GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
+    GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
+    GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
+    GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
 
-    # Keystore for Gateway SSL Kafka server
-#    GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
+    # # Keystore for Gateway TLS certificate
+    # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
     GATEWAY_SSL_KEY_TYPE: "JKS"
 
-    # Gateway HTTP API
-    # Gateway HTTPS configuration
+    # # Truststore for mTLS authentication of Gateway clients
+    # GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
+
+    # # Gateway HTTP API
+    # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
-    # Truststore for mTLS authentication of Gateway clients
-    #GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+    # # Truststore for mTLS authentication of Gateway clients
+    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
 
   volumes:
     # Mount truststore secrets for kafka and http client
@@ -93,17 +103,15 @@ metrics:
       prometheus: prometheus
       loki: loki
 
-# Expose API through an ingress with ssl passthrough
+# Expose admin REST API through an ingress
 ingress:
   enabled: true
   ingressClassName: nginx
   hostname: gateway.conduktor.localhost
   tls: true
-  extraTls:
-    - hosts:
-        - gateway.conduktor.localhost
   annotations:
-    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    ingress.kubernetes.io/ssl-passthrough: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    cert-manager.io/cluster-issuer: local-ca-issuer
+    kubernetes.io/ingress.class: nginx
+    # redirect TLS traffic directly to the Gateway container to handle TLS handshake
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"

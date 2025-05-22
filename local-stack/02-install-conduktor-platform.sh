@@ -17,6 +17,7 @@ tmp_gateway_secrets="${tmp_dir}/gateway-secrets.yaml"
 tmp_console_secrets="${tmp_dir}/console-secrets.yaml"
 
 echo "Installing conduktor-platform"
+helm repo add conduktor https://helm.conduktor.io
 
 echo
 echo "Install Conduktor Gateway"
