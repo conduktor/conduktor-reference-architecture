@@ -45,7 +45,7 @@ waitSecretCreated() {
 waitAvailable() {
   namespace=$1
   resource=$2
-  timeout=180
+  timeout=300
   interval=5
   start=$(date +%s)
   end=$((start + timeout))
