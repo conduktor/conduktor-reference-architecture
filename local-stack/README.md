@@ -22,11 +22,15 @@ Components installed :
 
 ## Prerequisites
 - Docker
+- Java Runtime
+- Kubectl
 - [K3D](https://k3d.io/stable/#releases)
 - Terraform
+- Kafka CLI commands (e.g. `brew install kafka`)
+- Helm
 - [Yq](https://mikefarah.gitbook.io/yq) v4.x
 - Conduktor License in `LICENSE` environment variable set.
-- Kafka CLI commands (e.g. `brew install kafka`)
+- Docker must be configured to 12GB minimum
 
 ## Create DNS entries
 Add the following lines to your `/etc/hosts` file in order to resolve hostnames:
@@ -41,7 +45,17 @@ k3d will pick up data from localhost (127.0.0.1) on ports 443 and 9092. The Ingr
 
 ## Create cluster with base components
 
-To create and start the local environment, run the following commands :
+
+For a quickstart, running the following commands will start and stop the stack.
+```bash
+./start.sh
+```
+or
+```bash
+./stop.sh
+```
+
+Otherwise, to create and start the local environment step by step, run the following commands :
 ```bash
 make start-local-stack
 ```
@@ -122,11 +136,13 @@ Port forward grafana to take a look at the dashboards.
 
 ```
 kubectl port-forward svc/grafana-service -n monitoring 3000:3000
+
+This can be backgrounded with kubectl port-forward svc/grafana-service -n monitoring 3000:3000 &
 ```
 
 Go to [http://localhost:3000](http://localhost:3000) and log in with `admin` and `admin` for username, password to explore the dashboards that ship with the Conduktor helm charts.
 
-Press `Ctrl+C` to kill the port forward.
+Press `Ctrl+C` to kill the port forward or run 'ps -ef | grep 3000' and kill the process.
 
 ## Destroy Conduktor platform local stack
 
@@ -134,3 +150,5 @@ To destroy the Conduktor platform, run the following command:
 ```bash
 make stop-local-stack
 ```
+
+If errors are encountered or to re-start the stack, after make stop-local-stack, it must be run from the beginning at make start-local-stack.
