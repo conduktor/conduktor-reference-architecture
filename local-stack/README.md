@@ -7,18 +7,19 @@ The goal of this example is to provide an examples of values/secrets needed to d
 This local example will deploy a local kubernetes cluster using K3D and install components that mimic the production environment.
 Components installed :
 - Kubernetes components :
-    - Nginx ingress controller for ingress management
-    - Cert-manager to manage certificates with a self-signed CA issuer
-    - Monitoring stack with Prometheus operator and Grafana operator
+    - **Nginx ingress controller** for ingress management
+    - **Cert-manager** to manage certificates with a self-signed CA issuer
+    - Monitoring stack with **Prometheus operator** and **Grafana operator**
 - Conduktor dependencies components :
-    - 2 Postgresql database
+    - 2 **Postgresql** database
         - Main database for Conduktor Console data
         - Optional SQL database for Conduktor Console SQL feature
-    - Kafka cluster with 3 brokers
-    - Hashicorp Vault to provide a KMS service
+    - **Kafka** cluster with 3 brokers
+    - **Hashicorp Vault** to provide a KMS service
+    - **Keycloak** OIDC server for SSO authentication
 - Conduktor platform :
-    - Conduktor Console in HA (2 instances) with Cortex sidecar
-    - Conduktor Gateway in HA (2 instances)
+    - **Conduktor Console** in HA (2 instances) with Cortex sidecar
+    - **Conduktor Gateway** in HA (2 instances)
 
 ## Prerequisites
 - Docker
@@ -27,6 +28,11 @@ Components installed :
 - [Yq](https://mikefarah.gitbook.io/yq) v4.x
 - Conduktor License in `LICENSE` environment variable set.
 - Kafka CLI commands (e.g. `brew install kafka`)
+
+### Hardware requirements
+- Minimum 4 CPUs available
+- Minimum 10GB of RAM available
+- Minimum 15GB of disk space available
 
 ## Create DNS entries
 Add the following lines to your `/etc/hosts` file in order to resolve hostnames:

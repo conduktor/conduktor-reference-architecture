@@ -20,7 +20,10 @@ createK3dCluster() {
 checkKubeContext() {
   if [ "$(kubectl config current-context)" != "k3d-conduktor-platform-p75" ]; then
     echo "Current context is not k3d-k3s-default. Switching context to k3d-conduktor-platform-p75"
-    kubectl config use-context k3d-conduktor-platform-p75
+    kubectl config use-context k3d-conduktor-platform-p75 || {
+      echo "Failed to switch context. Please check your kubectl configuration."
+      exit 1
+    }
   fi
 }
 

@@ -1,0 +1,46 @@
+---
+- name: "website-analytics-team"
+  displayName: "Web Analytic"
+  description: "Website Analytics Team"
+  permissions:
+    - resource_type: "PLATFORM"
+      permissions:
+        - "userView"
+        - "datamaskingView"
+        - "auditLogView"
+    - resource_type: "TOPIC"
+      name: "website-analytics."
+      cluster: "*"
+      pattern_type: "PREFIXED"
+      permissions:
+        - "topicViewConfig"
+        - "topicConsume"
+        - "topicProduce"
+        - "topicCreate"
+- name: "ecommerce-team"
+  displayName: "Ecommerce sales"
+  description: "Ecommerce sales Team"
+  permissions:
+    - resource_type: "PLATFORM"
+      permissions:
+        - "userView"
+        - "datamaskingView"
+        - "auditLogView"
+    - resource_type: "TOPIC"
+      name: "orders."
+      cluster: "*"
+      pattern_type: "PREFIXED"
+      permissions:
+        - "topicViewConfig"
+        - "topicConsume"
+        - "topicProduce"
+        - "topicCreate"
+- name: "support"
+  displayName: "Support"
+  description: "Support Team"
+  permissions:
+    - resource_type: "PLATFORM"
+      permissions:
+        - "userView"
+        - "datamaskingView"
+        - "auditLogView"
