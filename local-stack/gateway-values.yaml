@@ -36,10 +36,11 @@ gateway:
     GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
     GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
 
+    GATEWAY_SECURITY_MODE: "GATEWAY_MANAGED" # since Gateway 3.10.0
     GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
     GATEWAY_ACL_ENABLED: "true"
-    # console-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
-    GATEWAY_SUPER_USERS: "console-sa;app-1"
+    # console-sa/client-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
+    GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
     GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"

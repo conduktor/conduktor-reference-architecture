@@ -74,9 +74,8 @@ module "clusters" {
       description = "Conduktor Gateway Cluster using client-sa service account"
       kafka = {
         bootstrapServers = var.bootstrap_servers
-        # TODO - Use a different service account for client access
-        saslUsername     = module.gw-service-accounts.service_accounts["console-sa"].username
-        saslPassword     = module.gw-service-accounts.service_accounts["console-sa"].token
+        saslUsername     = module.gw-service-accounts.service_accounts["client-sa"].username
+        saslPassword     = module.gw-service-accounts.service_accounts["client-sa"].token
         securityProtocol = "SASL_SSL"
         saslMechanism    = "PLAIN"
       }
@@ -181,21 +180,27 @@ module "self-service-central" {
   }
 }
 
+locals {
+  web_analytics_team = module.iam.group_list["website-analytics-team"]
+  web_analytics_applications = { for app in module.self-service-central.applications: app.name => app if app.spec.owner == local.web_analytics_team.name }
+  web_analytics_applications_instances = { for inst in module.self-service-central.applications_instances: inst.name => inst if contains(keys(local.web_analytics_applications), inst.application ) }
+}
+
 module "self-service-team-website-analytics" {
   source = "./modules/self-service-team"
 
   # input variables
-  owner                 = module.iam.group_list["website-analytics-team"].name
-  applications          = module.self-service-central.applications
-  application_instances = module.self-service-central.applications_instances
+  owner                 = local.web_analytics_team.name
+  applications          = local.web_analytics_applications
+  application_instances = local.web_analytics_applications_instances
   permissions = []
   groups = [
     {
       name                 = "website-analytics-dev-support"
       displayName          = "Website Analytics Dev Support"
       description          = "Group for Support Team on Website Analytics Dev instance"
-      application          = module.self-service-central.applications["website-analytics"].name
-      application_instance = module.self-service-central.applications_instances["website-analytics-dev"].name
+      application          = local.web_analytics_applications["website-analytics"].name
+      application_instance = local.web_analytics_applications_instances["website-analytics-dev"].name
       members = [module.iam.users_list["alice@company.io"].name]
     }
   ]
@@ -240,62 +245,67 @@ module "self-service-team-website-analytics" {
     conduktor = conduktor.console
   }
 }
-#
-#
-# module "self-service-team-ecommerce" {
-#   source = "./modules/self-service-team"
-#
-#   # input variables
-#   owner                 = module.iam.group_list["ecommerce-team"].name
-#   applications          = module.self-service-central.applications
-#   application_instances = module.self-service-central.applications_instances
-#
-#   permissions = [
-#     {
-#       name                  = "ecommerce-event-dev-permission"
-#       application           = "ecommerce-sales"
-#       application_instance  = "ecommerce-event-dev"
-#       resource_type         = "TOPIC"
-#       resource_name         = "sales."
-#       resource_pattern_type = "PREFIXED"
-#       user_permission       = "READ"
-#       granted_to            = "website-analytics-dev"
-#     }
-#   ]
-#
-#   groups = [
-#     {
-#       name                 = "ecommerce-event-dev-support"
-#       displayName          = "E-commerce Event Dev Support"
-#       description          = "Group for Support Team on E-commerce Event dev instance"
-#       application          = "ecommerce-sales"
-#       application_instance = "ecommerce-event-dev"
-#       members = [module.iam.users_list["alice@company.io"].email]
-#     }
-#   ]
-#
-#
-#   topics = [
-#     {
-#       name    = "sales.events.avro"
-#       cluster = module.clusters.clusters["gateway-cluster"].name
-#       labels = {
-#         "data-criticality" = "C0",
-#         "environment"      = "prod"
-#         "team"             = "sales"
-#       }
-#       partitions  = 3
-#       replication = 1
-#       config = {
-#         "retention.ms"   = "604800000",
-#         "cleanup.policy" = "delete"
-#       }
-#     }
-#   ]
-#
-#
-#   # provider configuration
-#   providers = {
-#     conduktor = conduktor.console
-#   }
-# }
+
+locals {
+  ecommerce_team = module.iam.group_list["ecommerce-team"]
+  ecommerce_applications = { for app in module.self-service-central.applications: app.name => app if app.spec.owner == local.ecommerce_team.name }
+  ecommerce_applications_instances = { for inst in module.self-service-central.applications_instances: inst.name => inst if contains(keys(local.ecommerce_applications), inst.application ) }
+}
+
+module "self-service-team-ecommerce" {
+  source = "./modules/self-service-team"
+
+  # input variables
+  owner                 = local.ecommerce_team.name
+  applications          = local.ecommerce_applications
+  application_instances = local.ecommerce_applications_instances
+
+  permissions = [
+    {
+      name                  = "ecommerce-event-dev-permission"
+      application           = local.ecommerce_applications["ecommerce-sales"].name
+      application_instance  = local.ecommerce_applications_instances["ecommerce-event-dev"].name
+      resource_type         = "TOPIC"
+      resource_name         = "sales."
+      resource_pattern_type = "PREFIXED"
+      user_permission       = "READ"
+      granted_to            = module.self-service-central.applications_instances["website-analytics-dev"].name
+    }
+  ]
+
+  groups = [
+    {
+      name                 = "ecommerce-event-dev-support"
+      displayName          = "E-commerce Event Dev Support"
+      description          = "Group for Support Team on E-commerce Event dev instance"
+      application          = local.ecommerce_applications["ecommerce-sales"].name
+      application_instance = local.ecommerce_applications_instances["ecommerce-event-dev"].name
+      members = [module.iam.users_list["alice@company.io"].name]
+    }
+  ]
+
+
+  topics = [
+    {
+      name    = "sales.events.avro"
+      cluster = module.clusters.clusters["gateway-cluster"].name
+      labels = {
+        "data-criticality" = "C0",
+        "environment"      = "prod"
+        "team"             = "sales"
+      }
+      partitions  = 3
+      replication = 1
+      config = {
+        "retention.ms"   = "604800000",
+        "cleanup.policy" = "delete"
+      }
+    }
+  ]
+
+
+  # provider configuration
+  providers = {
+    conduktor = conduktor.console
+  }
+}
