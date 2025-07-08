@@ -1,39 +1,6 @@
 locals {
-
-  # instance_permissions = flatten([
-  #   for app in var.applications : [
-  #     for inst in app.instances : [
-  #       for perm in inst.permissions != null ? inst.permissions : [] : {
-  #         name                  = perm.name
-  #         application           = app.name
-  #         application_instance  = inst.name
-  #         resource_type         = perm.resource_type
-  #         resource_name         = perm.resource_name
-  #         resource_pattern_type = perm.resource_pattern_type
-  #         user_permission       = perm.user_permission
-  #         granted_to            = perm.granted_to
-  #       }
-  #     ]
-  #   ]
-  # ])
   instance_permissions_map = {for perm in var.permissions : perm.name => perm}
-
-  # app_groups = flatten([
-  #   for app in var.applications : [
-  #     for inst in app.instances : [
-  #       for grp in inst.groups != null ? inst.groups : [] : {
-  #         name        = grp.name
-  #         application = app.name
-  #         application_instance = inst.name
-  #         displayName = grp.displayName
-  #         description = grp.description
-  #         members     = grp.members != null ? toset(grp.members) : []
-  #       }
-  #     ]
-  #   ]
-  # ])
   app_groups_map = {for group in var.groups : group.name => group}
-
   topics_map = {for topic in var.topics : format("%s_%s", topic.name, topic.cluster) => topic}
 }
 

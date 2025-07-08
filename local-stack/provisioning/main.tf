@@ -180,6 +180,9 @@ module "self-service-central" {
   }
 }
 
+###
+# Self-Service Teams for Website Analytics and E-commerce
+###
 locals {
   web_analytics_team = module.iam.group_list["website-analytics-team"]
   web_analytics_applications = { for app in module.self-service-central.applications: app.name => app if app.spec.owner == local.web_analytics_team.name }
@@ -210,14 +213,14 @@ module "self-service-team-website-analytics" {
       name    = "website-analytics.dev.events.json"
       cluster = module.clusters.clusters["gateway-client-cluster"].name
       labels = {
-        "data-criticality" = "C2",
+        "data-criticality" = "C2"
         "environment"      = "dev"
         "team"             = "website-analytics"
       }
       partitions  = 3
       replication = 1
       config = {
-        "retention.ms"   = "604800000",
+        "retention.ms"   = "604800000"
         "cleanup.policy" = "delete"
       }
     },
@@ -226,14 +229,14 @@ module "self-service-team-website-analytics" {
       name    = "website-analytics.events.json"
       cluster = module.clusters.clusters["gateway-cluster"].name
       labels = {
-        "data-criticality" = "C0",
+        "data-criticality" = "C0"
         "environment"      = "prod"
         "team"             = "website-analytics"
       }
       partitions  = 3
       replication = 1
       config = {
-        "retention.ms"   = "604800000",
+        "retention.ms"   = "604800000"
         "cleanup.policy" = "delete"
       }
     }
@@ -290,14 +293,14 @@ module "self-service-team-ecommerce" {
       name    = "sales.events.avro"
       cluster = module.clusters.clusters["gateway-cluster"].name
       labels = {
-        "data-criticality" = "C0",
+        "data-criticality" = "C0"
         "environment"      = "prod"
         "team"             = "sales"
       }
       partitions  = 3
       replication = 1
       config = {
-        "retention.ms"   = "604800000",
+        "retention.ms"   = "604800000"
         "cleanup.policy" = "delete"
       }
     }
