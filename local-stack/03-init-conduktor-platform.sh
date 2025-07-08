@@ -5,10 +5,6 @@ set -E
 SCRIPT_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TERRAFORM_DIR=${SCRIPT_DIR}/provisioning
 
-#export TF_LOG=INFO
-#export TF_LOG_PROVIDER_CONDUKTOR=TRACE
-#export TF_LOG_PROVIDER_CONDUKTOR_INIT=INFO
-
 . "${SCRIPT_DIR}/kubernetes_utils.sh"
 
 checkKubeContext
