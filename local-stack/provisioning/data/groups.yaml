@@ -1,6 +1,6 @@
 ---
 - name: "website-analytics-team"
-  displayName: "Web Analytic"
+  displayName: "Web Analytics"
   description: "Website Analytics Team"
   permissions:
     - resource_type: "PLATFORM"
