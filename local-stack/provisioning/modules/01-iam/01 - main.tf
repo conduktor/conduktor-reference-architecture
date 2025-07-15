@@ -29,7 +29,6 @@ resource "conduktor_console_group_v2" "group" {
     display_name = each.value.displayName
     description  = each.value.description
     members      = local.group_users_map[each.key]
-    # members      = keys({ for user in var.users : user.email => user if contains(user.groups, each.value.name) })
     permissions = [
       for permission in each.value.permissions : {
         resource_type = permission.resource_type
