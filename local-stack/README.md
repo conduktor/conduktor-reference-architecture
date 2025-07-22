@@ -28,7 +28,7 @@ Components installed :
 - [K3D](https://k3d.io/stable/#releases)
 - Terraform
 - [Yq](https://mikefarah.gitbook.io/yq) v4.x
-- Conduktor License in `LICENSE` environment variable set.
+- Conduktor License is set in the `LICENSE` environment variable of the active shell or is present in the `.env` file
 - Kafka CLI commands (e.g. `brew install kafka`)
 
 ### Hardware requirements
@@ -66,7 +66,7 @@ kubectl config use-context k3d-conduktor-platform-p75
 
 ## Deploy Conduktor platform
 
-Then, to install Conduktor Console and Gateway, run the following commands :
+Ensure a license is set in the `.env` file, or active shell. Then, to install Conduktor Console and Gateway, run the following commands :
 
 ```bash
 make install-conduktor-platform
