@@ -3,4 +3,4 @@
 .terraform.lock.hcl
 terraform.tfstate*
 
-.env
+**/.env

@@ -39,7 +39,7 @@ Components installed :
 
 ## Create DNS entries
 
-Add the following lines to your `/etc/hosts` file in order to resolve hostnames:
+Add  following lines to your `/etc/hosts` file in order to resolve hostnames:
 
 ```properties
 127.0.0.1 console.conduktor.localhost
@@ -66,7 +66,10 @@ kubectl config use-context k3d-conduktor-platform-p75
 
 ## Deploy Conduktor platform
 
-Ensure a license is set in the `.env` file, or active shell. Then, to install Conduktor Console and Gateway, run the following commands :
+Ensure a Conduktor license is set in the `.env` file, or active shell.
+You can use `.env.template` file as a template to create your own `.env` file.
+
+Then, to install Conduktor Console and Gateway, run the following commands :
 
 ```bash
 make install-conduktor-platform
