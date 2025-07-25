@@ -4,13 +4,8 @@ set -e
 
 SCRIPT_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TERRAFORM_DIR="${SCRIPT_DIR}/provisioning"
-
-checkKubeContext() {
-  if [ "$(kubectl config current-context)" != "k3d-conduktor-platform-p75" ]; then
-    echo "Current context is not k3d-k3s-default. Switching context to k3d-conduktor-platform-p75"
-    kubectl config use-context k3d-conduktor-platform-p75
-  fi
-}
+STACK_DIR=$(cd "${SCRIPT_DIR}/k3d-stack" && pwd)
+. "${SCRIPT_DIR}/kubernetes_utils.sh"
 
 checkKubeContext
 echo "Deleting k3d cluster"

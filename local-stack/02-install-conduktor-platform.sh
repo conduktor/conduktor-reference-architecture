@@ -5,11 +5,16 @@ set -E
 SCRIPT_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 . "${SCRIPT_DIR}/kubernetes_utils.sh"
 
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+  echo "Loading environment variables from .env file"
+  export $(grep -v '^#' .env | sed 's/export //')
+fi
+
 checkKubeContext
 
 yq --version > /dev/null 2>&1 || { echo >&2 "yq is not installed. Please install yq to continue."; exit 1; }
 
-license=${LICENSE:?Missing license environment variable}
+license=${LICENSE:?Missing LICENSE environment variable with Conduktor license key}
 
 tmp_dir=$(mktemp -d)
 echo "Temporary directory created: $tmp_dir"

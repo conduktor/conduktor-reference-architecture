@@ -1,0 +1,16 @@
+---
+- email: "bob@company.io"
+  firstname: "Bob"
+  lastname: "Smith"
+  groups:
+    - "ecommerce-team"
+- email: "tim@company.io"
+  firstname: "Tim"
+  lastname: "Smith"
+  groups:
+    - "website-analytics-team"
+- email: "alice@company.io"
+  firstname: "Alice"
+  lastname: "Kingsleigh"
+  groups:
+    - "support"

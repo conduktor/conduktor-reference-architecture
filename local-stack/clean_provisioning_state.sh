@@ -14,12 +14,12 @@ pushd "${TERRAFORM_DIR}"
 
   # Check if admin already in state or not
   if terraform state list | grep -q "conduktor_console_group_v2.admin"; then
-    echo "Admin group already exists in state"
+    echo "Admin group exists in state, removing it before destroying"
+    terraform state rm conduktor_console_group_v2.admin || true
   else
     echo "Admin group does not exist in state"
-    # import already existing admin group
-    terraform apply -var-file=terraform.tfvars -target=conduktor_console_group_v2.admin -auto-approve
   fi
 
-  terraform apply -var-file=terraform.tfvars -auto-approve
+  echo "Destroying Conduktor platform resources"
+  terraform destroy -var-file=terraform.tfvars -auto-approve
 popd

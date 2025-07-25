@@ -1,3 +1,4 @@
+
 variable "console_base_url" {
   description = "Base URL for the Conduktor Console"
   type        = string
