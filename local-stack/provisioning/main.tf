@@ -63,7 +63,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = var.gateway_base_url
+        baseUrl       = "${var.gateway_base_url}:8888"
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
@@ -85,7 +85,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = var.gateway_base_url
+        baseUrl       = "${var.gateway_base_url}:8888"
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
