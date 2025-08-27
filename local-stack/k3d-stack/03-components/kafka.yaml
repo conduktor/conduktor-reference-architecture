@@ -16,8 +16,13 @@ spec:
   version: 32.1.2
   targetNamespace: cdk-deps
   set:
+    global.security.allowInsecureImages: "true"
     clusterId: "cdk"
+    image.repository: "bitnamilegacy/kafka"
     image.debug: "false"
+    defaultInitContainers.volumePermissions.image.repository: "bitnamilegacy/os-shell"
+    defaultInitContainers.autoDiscovery.image.repository: "bitnamilegacy/os-shell"
+    metrics.jmx.image.repository: "bitnamilegacy/jmx-exporter"
     listeners.client.port: "9092"
     listeners.client.protocol: "SASL_SSL"
     listeners.external.protocol: "SASL_SSL"

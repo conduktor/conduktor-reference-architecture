@@ -16,6 +16,10 @@ spec:
   set:
     global.postgresql.auth.database: conduktor
     global.postgresql.auth.postgresPassword: conduktor
+    global.security.allowInsecureImages: "true"
+    image.repository: "bitnamilegacy/postgresql"
+    volumePermissions.image.repository: "bitnamilegacy/os-shell"
+    metrics.image.repository: "bitnamilegacy/postgres-exporter"	
     auth.postgresPassword: conduktor
     primary.persistence.size: 1Gi
     volumePermissions.enabled: "true"
@@ -38,6 +42,10 @@ spec:
   set:
     global.postgresql.auth.database: conduktor
     global.postgresql.auth.postgresPassword: conduktor
+    global.security.allowInsecureImages: "true"
+    image.repository: "bitnamilegacy/postgresql"
+    volumePermissions.image.repository: "bitnamilegacy/os-shell"
+    metrics.image.repository: "bitnamilegacy/postgres-exporter"	
     auth.postgresPassword: conduktor
     primary.persistence.size: 1Gi
     volumePermissions.enabled: "true"
