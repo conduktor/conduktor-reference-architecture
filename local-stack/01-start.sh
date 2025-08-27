@@ -49,7 +49,6 @@ waitRollout cdk-deps sts/kafka-controller
 
 # generate truststore for Schema registry using Kafka certificates
 generate_schema_registry_jks_truststore
-#separte because bitnami schema-registry expect ssl.truststore.jks file that we can't create using cert-manager
 kubectl apply -f ${STACK_DIR}/03-components/schema-registry.yaml
 
 echo

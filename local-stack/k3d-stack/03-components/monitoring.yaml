@@ -34,6 +34,9 @@ spec:
   targetNamespace: monitoring
   createNamespace: true
   set:
+    global.security.allowInsecureImages: "true"
     operator.namespaceScope: "false"
     operator.watchNamespace: ""
+    operator.image.repository: "bitnamilegacy/grafana-operator"
     grafana.enabled: "false"
+    grafana.image.repository: "bitnamilegacy/grafana"
