@@ -288,7 +288,8 @@ data:
           "nodeReRegistrationTimeout": -1,
           "defaultClientScopes": [
             "profile",
-            "groups"
+            "groups",
+            "email"
           ],
           "optionalClientScopes": [
             "address",
@@ -299,6 +300,35 @@ data:
         }
       ],
       "clientScopes": [
+        {
+          "id": "44ab586a-b66c-41b0-9b18-d22c5fe28e9f",
+          "name": "email",
+          "description": "",
+          "protocol": "openid-connect",
+          "attributes": {
+            "include.in.token.scope": "true",
+            "display.on.consent.screen": "true",
+            "gui.order": "",
+            "consent.screen.text": ""
+          },
+          "protocolMappers": [
+            {
+              "id": "7a571f1a-2dbb-456c-a79a-c108e822f56e",
+              "name": "kafka-audience",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-audience-mapper",
+              "consentRequired": false,
+              "config": {
+                "id.token.claim": "false",
+                "lightweight.claim": "false",
+                "introspection.token.claim": "true",
+                "access.token.claim": "true",
+                "included.custom.audience": "account",
+                "userinfo.token.claim": "false"
+              }
+            }
+          ]
+        },    
         {
           "id": "13aedb04-8483-4373-ad59-83f321674951",
           "name": "groups",
@@ -550,7 +580,8 @@ data:
       ],
       "defaultDefaultClientScopes": [
         "profile",
-        "groups"
+        "groups",
+        "email"
       ],
       "browserSecurityHeaders": {
         "contentSecurityPolicyReportOnly": "",
