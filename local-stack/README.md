@@ -114,20 +114,34 @@ curl -k -u admin:adminP4ss! \
     'https://gateway.conduktor.localhost/gateway/v2/interceptor'
 ```
 
-You can reach Kafka through Gateway using SASL OAuthbearer (see client.properties file). Here we assume `kafka-topics` is installed locally.
+You can reach Kafka through Gateway using SASL OAuthbearer (see client.properties file). Here we assume `kafka-topics` is installed locally and is running Apache Kafka version 4 or greater.
 
 ```bash
 # Need to set truststore at the JVM level to authenticate with OIDC
 export KAFKA_OPTS="-Djava.security.manager=allow \
 -Djavax.net.ssl.trustStore=./truststore.jks \
 -Djavax.net.ssl.trustStorePassword=conduktor \
--Djavax.net.ssl.trustStoreType=JKS"
+-Djavax.net.ssl.trustStoreType=JKS \
+-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/token"
 ```
 
 ```bash
 kafka-topics --list \
     --bootstrap-server gateway.conduktor.localhost:9092 \
     --command-config client.properties
+```
+
+Alternatively, to run a Kafka client on an older version, you can use this docker command:
+
+```bash
+docker run --rm --network host \
+  -e KAFKA_OPTS="-Djava.security.manager=allow -Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor -Djavax.net.ssl.trustStoreType=JKS -Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/token" \
+  -v $PWD/truststore.jks:/tmp/truststore.jks \
+  -v $PWD/client_pre_ak4.properties:/tmp/client.properties \
+  apache/kafka:3.8.0 /opt/kafka/bin/kafka-topics.sh \
+    --bootstrap-server gateway.conduktor.localhost:9092 \
+    --command-config /tmp/client.properties \
+    --list
 ```
 
 ### Identity Provider
