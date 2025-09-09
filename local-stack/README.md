@@ -135,7 +135,7 @@ Alternatively, to run a Kafka client on an older version, you can use this docke
 
 ```bash
 docker run --rm --network host \
-  -e KAFKA_OPTS="-Djava.security.manager=allow -Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor -Djavax.net.ssl.trustStoreType=JKS" \
+  -e KAFKA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor -Djavax.net.ssl.trustStoreType=JKS" \
   -v $PWD/truststore.jks:/tmp/truststore.jks \
   -v $PWD/client_pre_ak4.properties:/tmp/client.properties \
   apache/kafka:3.8.0 /opt/kafka/bin/kafka-topics.sh \
