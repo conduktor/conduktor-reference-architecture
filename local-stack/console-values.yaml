@@ -51,7 +51,7 @@ platform:
   resources:
     # reduce resource requests for example purpose.
     requests:
-      cpu: 0.5
+      cpu: 500m
       memory: 1Gi
   extraEnvVars:
     - name: CDK_ROOT_LOG_FORMAT
@@ -131,7 +131,7 @@ platformCortex:
   resources:
     # reduce resource requests for example purpose.
     requests:
-      cpu: 0.5
+      cpu: 500m
       memory: 0.5Gi
 
   containerSecurityContext:
