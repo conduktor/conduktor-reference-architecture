@@ -9,6 +9,7 @@ STACK_DIR=$(cd "${SCRIPT_DIR}/k3d-stack" && pwd)
 echo "Creating k3d cluster"
 createK3dCluster
 checkKubeContext
+importLocalImage
 
 echo
 echo "01 - Installing infra base components"

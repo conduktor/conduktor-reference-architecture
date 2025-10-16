@@ -27,6 +27,15 @@ checkKubeContext() {
   fi
 }
 
+importLocalImage() {
+  #echo "Importing harbor.cdkt.dev/conduktor/conduktor-gateway:latest"
+  #k3d image import harbor.cdkt.dev/conduktor/conduktor-gateway:latest -c conduktor-platform-p75
+  echo "Importing conduktor-console:local"
+  k3d image import conduktor-console:local -c conduktor-platform-p75
+  echo "Importing conduktor-console-cortex:local"
+  k3d image import conduktor-console-cortex:local -c conduktor-platform-p75
+}
+
 waitSecretCreated() {
   namespace=$1
   resource=$2

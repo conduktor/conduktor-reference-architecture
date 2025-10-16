@@ -1,5 +1,5 @@
 gateway:
-  replicas: 3
+  replicas: 1
   resources:
     # reduce resource requests for example purpose.
     requests:

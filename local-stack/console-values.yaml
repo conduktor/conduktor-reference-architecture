@@ -16,6 +16,9 @@ config:
     host: "main-postgresql.cdk-deps.svc.cluster.local"
     port: 5432
     name: "conduktor"
+    options:
+      socketTimeout: "30"
+      keepaliveTime: "30"
   kafkasql:
     refresh_user_permissions_every_in_sec: 3600
     database:
@@ -47,7 +50,7 @@ config:
     clusterParallelism: 20
 
 platform:
-  replicaCount: 2
+  replicaCount: 1
   resources:
     # reduce resource requests for example purpose.
     requests:
