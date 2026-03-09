@@ -1,5 +1,9 @@
 gateway:
-  replicas: 3
+  image:
+    repository: conduktor/conduktor-gateway
+    tag: nightly
+
+  replicas: 2
   resources:
     # reduce resource requests for example purpose.
     requests:
@@ -58,6 +62,7 @@ gateway:
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     # # Truststore for mTLS authentication of Gateway clients
     # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+    GATEWAY_SHUTDOWN_DELAY_BETWEEN_BROKERS_MS: "20000"
 
   volumes:
     # Mount truststore secrets for kafka and http client

@@ -27,6 +27,14 @@ checkKubeContext() {
   fi
 }
 
+importLocalImage() {
+  # Note: Execute this first `docker pull --platform linux/amd64 harbor.cdkt.dev/conduktor/conduktor-gateway:nightly`
+  #k3d image import harbor.cdkt.dev/conduktor/conduktor-gateway:nightly -c conduktor-platform-p75
+
+  # Note: Execute this first `docker pull --platform linux/amd64 conduktor/conduktor-gateway:nightly`
+  k3d image import conduktor/conduktor-gateway:nightly -c conduktor-platform-p75
+}
+
 waitSecretCreated() {
   namespace=$1
   resource=$2

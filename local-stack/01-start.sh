@@ -9,6 +9,7 @@ STACK_DIR=$(cd "${SCRIPT_DIR}/k3d-stack" && pwd)
 echo "Creating k3d cluster"
 createK3dCluster
 checkKubeContext
+importLocalImage
 
 echo
 echo "01 - Installing infra base components"
@@ -66,3 +67,4 @@ generate_jks_truststore
 
 # Download the truststore to the local machine
 kubectl get secret bundle-truststore -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > $SCRIPT_DIR/truststore.jks
+kubectl get secret root-ca-secret -n cert-manager -o jsonpath='{.data.ca\.crt}' | base64 --decode > $SCRIPT_DIR/ca.crt

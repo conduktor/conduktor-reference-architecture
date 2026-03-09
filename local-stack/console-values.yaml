@@ -47,7 +47,7 @@ config:
     clusterParallelism: 20
 
 platform:
-  replicaCount: 2
+  replicaCount: 1
   resources:
     # reduce resource requests for example purpose.
     requests:
