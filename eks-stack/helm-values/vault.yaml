@@ -1,0 +1,8 @@
+server:
+  dev:
+    enabled: true
+    devRootToken: "conduktor-vault-token"
+  postStart:
+    - "/bin/sh"
+    - "-c"
+    - "sleep 5 && vault secrets enable transit && vault secrets enable -version=1 kv && vault secrets enable totp"

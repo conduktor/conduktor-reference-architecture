@@ -1,0 +1,135 @@
+######
+# Console configuration
+######
+config:
+  platform:
+    external:
+      # External URL for Console, useful when behind a proxy to fix SSO issues
+      url: "https://${CONSOLE_DOMAIN}"
+    https:
+      existingSecret: "custom-console-crt-secret" # Secret with TLS certificate tls.crt and tls.key PEMs
+
+  # Secrets with license, admin user and database credentials
+  existingSecret: "console-secrets"
+  database:
+    host: "main-postgresql.cdk-deps.svc.cluster.local"
+    port: 5432
+    name: "conduktor"
+  kafkasql:
+    refresh_user_permissions_every_in_sec: 3600
+    database:
+      host: "sql-postgresql.cdk-deps.svc.cluster.local"
+      port: 5432
+      name: "conduktor"
+      username: "conduktor"
+  audit_log_publisher:
+    cluster: "gateway-cluster"
+    topicName: "console-auditlog"
+  monitoring:
+    use_aggregated_metrics: true
+    enable_non_aggregated_metrics: false
+
+  clusters: [] # Clusters managed through API using Terraform in this example
+
+  sso:
+    oauth2:
+      - name: "keycloak"
+        default: true
+        client-id: "${SSO_CLIENT_ID}"
+        client-secret: "${SSO_CLIENT_SECRET}"
+        groups-claim: "groups"
+        openid:
+          issuer: https://${OIDC_DOMAIN}/realms/conduktor-realm
+
+  metadataIndexer:
+    indexerTimeout: 30
+    clusterParallelism: 20
+
+platform:
+  replicaCount: 1
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  extraEnvVars:
+    - name: CDK_ROOT_LOG_FORMAT
+      value: "JSON"
+
+    # Provide trust store for SSL connections (PG,OIDC,Kafka,SR,...)
+    - name: CDK_SSL_TRUSTSTORE_PATH
+      value: "/opt/conduktor/ssl/truststore.jks"
+    - name: CDK_SSL_TRUSTSTORE_TYPE
+      value: "jks"
+
+  extraVolumes:
+    # SSL volume that provide truststore.jks for SSL connections
+    - name: ssl
+      secret:
+        secretName: bundle-truststore
+
+  extraVolumeMounts:
+    # SSL volume that provide truststore.jks for SSL connections
+    - name: ssl
+      mountPath: /opt/conduktor/ssl
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    runAsUser: 10001
+    runAsGroup: 0
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+    grafana:
+      enabled: true
+      folder: "Conduktor"
+      labels:
+        grafana_dashboard: "1" # for grafana sidecar auto-discovery
+      namespace: "monitoring"
+      datasources:
+        prometheus: prometheus
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "${CORTEX_IRSA_ROLE_ARN}"
+
+ingress:
+  enabled: false
+
+######
+# Console Cortex monitoring configuration
+######
+monitoringConfig:
+  # Secrets with S3 credentials
+  existingSecret: "console-cortex-secrets"
+  scraper:
+    skipSSLCheck: false # Console CA automatically mounted from config.platform.https.existingSecret
+  storage:
+    s3:
+      endpoint: "s3.${S3_REGION}.amazonaws.com"
+      bucket: "${S3_BUCKET_NAME}"
+      region: "${S3_REGION}"
+      insecure: false
+
+platformCortex:
+  enabled: true
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 500m
+      memory: 0.5Gi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    runAsUser: 10001
+    runAsGroup: 0
+    fsGroup: 0

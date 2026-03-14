@@ -1,0 +1,12 @@
+global:
+  security:
+    allowInsecureImages: true
+operator:
+  namespaceScope: false
+  watchNamespace: ""
+  image:
+    repository: "bitnamilegacy/grafana-operator"
+grafana:
+  enabled: false
+  image:
+    repository: "bitnamilegacy/grafana"

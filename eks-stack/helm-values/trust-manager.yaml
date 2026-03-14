@@ -1,0 +1,5 @@
+crds:
+  enabled: true
+secretTargets:
+  enabled: true
+  authorizedSecretsAll: true # for example only

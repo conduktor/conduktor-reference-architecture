@@ -1,0 +1,8 @@
+prometheus:
+  prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+alertmanager:
+  enabled: true
+grafana:
+  enabled: false

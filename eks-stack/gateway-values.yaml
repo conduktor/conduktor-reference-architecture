@@ -1,0 +1,106 @@
+gateway:
+  image:
+    repository: conduktor/conduktor-gateway
+    tag: nightly
+
+  replicas: 2
+  resources:
+    # reduce resource requests for example purpose.
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  secretRef: "gateway-secrets"
+  env:
+    #### Backend kafka configuration
+    ##
+    GATEWAY_UPSTREAM_CONNECTION_POOL_TYPE: "ROUND_ROBIN" # multiplexing optimization
+    KAFKA_BOOTSTRAP_SERVERS: "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
+    KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+    KAFKA_SASL_MECHANISM: "PLAIN"
+
+    # Truststore for Gateway kafka client -> Kafka brokers
+    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/truststore/truststore.jks
+    KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
+
+    #### Gateway Kafka proxy configuration for clients
+    ##
+    GATEWAY_ADVERTISED_HOST: "${GATEWAY_DOMAIN}" # external hostname of the gateway
+
+    # SNI routing configuration
+    GATEWAY_ROUTING_MECHANISM: host
+    GATEWAY_ADVERTISED_SNI_PORT: "9092"
+    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "${GATEWAY_DOMAIN}"
+    GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
+
+    GATEWAY_SECURITY_MODE: "GATEWAY_MANAGED" # since Gateway 3.10.0
+    GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
+    GATEWAY_ACL_ENABLED: "true"
+    # console-sa/client-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
+    GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
+    GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
+    GATEWAY_OAUTH_EXPECTED_ISSUER: "https://${OIDC_DOMAIN}/realms/conduktor-realm"
+    GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
+    GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
+
+    # # Keystore for Gateway TLS certificate
+    # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
+    GATEWAY_SSL_KEY_TYPE: "JKS"
+
+    # # Gateway HTTP API
+    # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
+    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    GATEWAY_SHUTDOWN_DELAY_BETWEEN_BROKERS_MS: "20000"
+
+  volumes:
+    # Mount truststore secrets for kafka and http client
+    - name: truststore
+      secret:
+        secretName: bundle-truststore # secret with truststore.jks containing kafka and schema registry certificates
+
+  volumeMounts:
+    # Mount truststore secrets for kafka and http client
+    - name: truststore
+      mountPath: /etc/conduktor/tls/truststore
+      readOnly: true
+
+  portRange:
+    start: 9092
+    count: 1
+  admin:
+    port: 8888
+    securedMetrics: false
+
+service:
+  external:
+    enable: true
+    type: LoadBalancer
+    admin: true
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+
+# Mount keystore for TLS
+tls:
+  enable: true
+  secretRef: "gateway-tls-secret"
+  keystoreKey: keystore.jks
+  keystoreFile: keystore.jks
+
+metrics:
+  prometheus:
+    enable: true
+  grafana:
+    enable: true
+    folder: "Conduktor"
+    labels:
+      grafana_dashboard: "1" # for grafana sidecar auto-discovery
+    namespace: "monitoring"
+    datasources:
+      prometheus: prometheus
+      loki: loki
+
+# Ingress disabled - ALB ingress managed via 01-start.sh
+ingress:
+  enabled: false
