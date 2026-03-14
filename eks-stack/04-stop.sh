@@ -58,6 +58,10 @@ helm uninstall trust-manager -n cert-manager 2>/dev/null || true
 helm uninstall cert-manager -n cert-manager 2>/dev/null || true
 
 echo
+echo "Removing gp3 StorageClass..."
+kubectl delete storageclass gp3 2>/dev/null || true
+
+echo
 echo "Removing namespaces..."
 kubectl delete -f ${SCRIPT_DIR}/manifests/00-namespaces.yaml 2>/dev/null || true
 

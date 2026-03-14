@@ -10,8 +10,24 @@ loadConfig
 checkKubeContext
 
 echo
-echo "00 - Creating namespaces"
+echo "00 - Creating namespaces and storage class"
 kubectl apply -f ${SCRIPT_DIR}/manifests/00-namespaces.yaml
+
+# Create gp3 StorageClass using EBS CSI driver (EKS does not provide a default StorageClass)
+kubectl apply -f - <<'EOF'
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+EOF
 
 echo
 echo "01 - Adding Helm repositories"

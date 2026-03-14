@@ -13,14 +13,13 @@ All other components (Kafka, PostgreSQL, Keycloak, Vault, Schema Registry, Prome
 
 ## Prerequisites
 
+See [PREREQUISITE.md](./PREREQUISITE.md) for a detailed step-by-step setup guide. In summary, you need:
+
 - An existing EKS cluster with `kubectl` access configured
 - AWS CLI configured with appropriate permissions
-- The following IAM roles created with IRSA trust policies:
-  - **AWS Load Balancer Controller role** — permissions to manage ALB/NLB resources
-  - **Cortex S3 role** — `s3:PutObject`, `s3:GetObject`, `s3:ListBucket`, `s3:DeleteObject` on your monitoring bucket
-- An ACM certificate covering your domains (`console.example.com`, `gateway.example.com`, `oidc.example.com`)
+- IAM roles created with IRSA trust policies for the AWS Load Balancer Controller and Cortex S3 access
+- An ACM certificate (self-signed imported certificate works for testing)
 - An S3 bucket for Cortex monitoring data
-- DNS records (Route 53 or external) pointing your domains to the ALB/NLB once created
 - Tools installed locally: `helm`, `kubectl`, `terraform`, `yq`, `envsubst`, `keytool`, `openssl`
 - A valid Conduktor license key
 
@@ -40,9 +39,9 @@ export AWS_REGION=us-east-1
 export EKS_CLUSTER_NAME=conduktor-eks
 export KUBE_CONTEXT="arn:aws:eks:us-east-1:123456789012:cluster/conduktor-eks"
 
-export CONSOLE_DOMAIN=console.conduktor.example.com
-export GATEWAY_DOMAIN=gateway.conduktor.example.com
-export OIDC_DOMAIN=oidc.example.com
+export CONSOLE_DOMAIN=console.conduktor.test
+export GATEWAY_DOMAIN=gateway.conduktor.test
+export OIDC_DOMAIN=oidc.conduktor.test
 
 export ACM_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234
 export S3_BUCKET_NAME=conduktor-monitoring
@@ -88,30 +87,36 @@ make init-conduktor-platform
 
 Runs Terraform to create users, groups, clusters, interceptors, and self-service configurations.
 
-### 6. Set up DNS
+### 6. Set up `/etc/hosts`
 
-After deployment, retrieve the ALB and NLB addresses:
+After deployment, map the local `.test` domains to the ALB/NLB IP addresses:
 
 ```bash
-# ALB address (for Console, Gateway admin, Keycloak)
-kubectl get ingress -A
+# Get the ALB hostname and resolve to IP
+ALB_HOST=$(kubectl get ingress console-alb-ingress -n conduktor \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+ALB_IP=$(dig +short $ALB_HOST | head -1)
 
-# NLB address (for Gateway Kafka proxy)
-kubectl get svc conduktor-gateway-external -n conduktor
+# Add entries for Console, Gateway admin, and Keycloak
+sudo sh -c "echo '$ALB_IP  console.conduktor.test gateway.conduktor.test oidc.conduktor.test' >> /etc/hosts"
+
+# Get the NLB hostname for Gateway Kafka proxy
+NLB_HOST=$(kubectl get svc conduktor-gateway-external -n conduktor \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+NLB_IP=$(dig +short $NLB_HOST | head -1)
+
+# Add SNI broker routing entry
+sudo sh -c "echo '$NLB_IP  brokermain0.gateway.conduktor.test' >> /etc/hosts"
 ```
 
-Create DNS records pointing:
-- `console.conduktor.example.com` → ALB address
-- `gateway.conduktor.example.com` → ALB address (HTTPS admin) AND NLB address (TCP port 9092)
-- `oidc.example.com` → ALB address
-- `*.gateway.conduktor.example.com` → NLB address (for SNI broker routing)
+> **Using real domains?** If you own a domain, create DNS records instead: point `console.yourdomain.com`, `gateway.yourdomain.com`, `oidc.yourdomain.com` to the ALB address, and `*.gateway.yourdomain.com` to the NLB address.
 
 ### 7. Verify
 
-- Console: `https://console.conduktor.example.com` (admin@demo.dev / adminP4ss!)
-- Gateway admin API: `https://gateway.conduktor.example.com`
-- Kafka proxy: `gateway.conduktor.example.com:9092`
-- Keycloak admin: `https://oidc.example.com/admin` (admin / conduktor)
+- Console: `https://console.conduktor.test` (admin@demo.dev / adminP4ss!) — accept the self-signed certificate warning
+- Gateway admin API: `https://gateway.conduktor.test`
+- Kafka proxy: `gateway.conduktor.test:9092`
+- Keycloak admin: `https://oidc.conduktor.test/admin` (admin / conduktor)
 
 ## Teardown
 
@@ -236,7 +241,7 @@ The stack uses self-signed certificates internally via cert-manager. External TL
 
 ### Gateway SNI Routing
 
-The Gateway uses host-based SNI routing for Kafka broker connections. Each broker gets a subdomain like `brokermain0.gateway.conduktor.example.com`. Ensure your DNS wildcard record (`*.gateway.conduktor.example.com`) points to the NLB.
+The Gateway uses host-based SNI routing for Kafka broker connections. Each broker gets a subdomain like `brokermain0.gateway.conduktor.test`. If using `/etc/hosts`, add an entry for each broker subdomain pointing to the NLB IP. If using real domains, ensure your DNS wildcard record (`*.gateway.yourdomain.com`) points to the NLB.
 
 To change the SNI separator or port, edit `gateway-values.yaml`:
 

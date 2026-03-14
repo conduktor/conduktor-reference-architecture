@@ -8,6 +8,7 @@ global:
 image:
   repository: "bitnamilegacy/postgresql"
 volumePermissions:
+  enabled: true
   image:
     repository: "bitnamilegacy/os-shell"
 metrics:
@@ -17,9 +18,8 @@ auth:
   postgresPassword: conduktor
 primary:
   persistence:
+    storageClass: gp3
     size: 10Gi
-volumePermissions:
-  enabled: true
 tls:
   enabled: true
   certificatesSecret: "pg-sql-crt-secret"

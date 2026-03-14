@@ -11,13 +11,13 @@ This guide walks you through every AWS resource and local tool you need before d
 3. [Create a VPC (or Use an Existing One)](#3-create-a-vpc-or-use-an-existing-one)
 4. [Create an EKS Cluster](#4-create-an-eks-cluster)
 5. [Connect kubectl to the Cluster](#5-connect-kubectl-to-the-cluster)
-6. [Create an S3 Bucket for Monitoring](#6-create-an-s3-bucket-for-monitoring)
-7. [Enable OIDC Provider on EKS (for IRSA)](#7-enable-oidc-provider-on-eks-for-irsa)
-8. [Create the IAM Role for AWS Load Balancer Controller](#8-create-the-iam-role-for-aws-load-balancer-controller)
-9. [Create the IAM Role for Cortex S3 Access](#9-create-the-iam-role-for-cortex-s3-access)
-10. [Set Up Domain Names in AWS (Route 53)](#10-set-up-domain-names-in-aws-route-53)
-11. [Request an ACM Certificate](#11-request-an-acm-certificate)
-12. [Prepare DNS Records](#12-prepare-dns-records)
+6. [Install the Amazon EBS CSI Driver](#6-install-the-amazon-ebs-csi-driver)
+7. [Create an S3 Bucket for Monitoring](#7-create-an-s3-bucket-for-monitoring)
+8. [Enable OIDC Provider on EKS (for IRSA)](#8-enable-oidc-provider-on-eks-for-irsa)
+9. [Create the IAM Role for AWS Load Balancer Controller](#9-create-the-iam-role-for-aws-load-balancer-controller)
+10. [Create the IAM Role for Cortex S3 Access](#10-create-the-iam-role-for-cortex-s3-access)
+11. [Choose Domain Names](#11-choose-domain-names)
+12. [Create an ACM Certificate (Self-Signed)](#12-create-an-acm-certificate-self-signed)
 13. [Obtain a Conduktor License](#13-obtain-a-conduktor-license)
 14. [Fill in config.env](#14-fill-in-configenv)
 15. [Checklist](#15-checklist)
@@ -235,6 +235,17 @@ aws eks create-cluster \
 
 After creating the cluster, add a managed node group from the Console or CLI.
 
+### Get the VPC ID
+
+Regardless of which option you used above, retrieve the VPC ID associated with your EKS cluster:
+
+```bash
+aws eks describe-cluster --name conduktor-eks \
+  --query "cluster.resourcesVpcConfig.vpcId" --output text
+```
+
+Save this value for `VPC_ID` in `config.env`. If you created the VPC manually in Step 3, this should match the VPC ID from that step. If you used `eksctl`, it created a new VPC automatically — use the ID returned here.
+
 ---
 
 ## 5. Connect kubectl to the Cluster
@@ -269,9 +280,97 @@ arn:aws:eks:us-east-1:123456789012:cluster/conduktor-eks
 
 Save this value for `KUBE_CONTEXT` in `config.env`.
 
+### (Optional) Enable Kubernetes resource view in the AWS Console
+
+By default, the EKS console may not show pods, nodes, or other Kubernetes resources. To enable this, grant your IAM identity cluster admin access.
+
+**If you use a regular IAM user:**
+
+```bash
+USER_ARN=$(aws sts get-caller-identity --query "Arn" --output text)
+
+aws eks create-access-entry \
+  --cluster-name conduktor-eks \
+  --principal-arn "$USER_ARN"
+
+aws eks associate-access-policy \
+  --cluster-name conduktor-eks \
+  --principal-arn "$USER_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster
+```
+
+**If you use AWS SSO (federated login):**
+
+The AWS Console uses your SSO role, not the assumed session. Find your SSO role ARN and grant it access:
+
+```bash
+# Find your SSO role ARN (replace the role name filter with your SSO role)
+aws iam list-roles \
+  --query "Roles[?contains(RoleName, 'AWSReservedSSO')].Arn" --output table
+
+# Use the role ARN from the output above
+SSO_ROLE_ARN="arn:aws:iam::ACCOUNT_ID:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_YourRoleName_xxxxxxxxxxxx"
+
+aws eks create-access-entry \
+  --cluster-name conduktor-eks \
+  --principal-arn "$SSO_ROLE_ARN"
+
+aws eks associate-access-policy \
+  --cluster-name conduktor-eks \
+  --principal-arn "$SSO_ROLE_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster
+```
+
+After this, refresh the EKS console and you should see pods, nodes, and other resources under the **Resources** tab.
+
 ---
 
-## 6. Create an S3 Bucket for Monitoring
+## 6. Install the Amazon EBS CSI Driver
+
+EKS does not include a storage provisioner by default. The stack uses PersistentVolumeClaims for Kafka, PostgreSQL, and Vault, which require the **Amazon EBS CSI Driver** to dynamically provision EBS volumes. Without it, pods will fail to schedule with `unbound immediate PersistentVolumeClaims` errors.
+
+### Step 6a: Create the IAM role for the EBS CSI driver
+
+```bash
+eksctl create iamserviceaccount \
+  --name ebs-csi-controller-sa \
+  --namespace kube-system \
+  --cluster conduktor-eks \
+  --role-name AmazonEKS_EBS_CSI_DriverRole \
+  --role-only \
+  --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
+  --approve
+```
+
+### Step 6b: Install the EBS CSI addon
+
+```bash
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+
+aws eks create-addon \
+  --cluster-name conduktor-eks \
+  --addon-name aws-ebs-csi-driver \
+  --service-account-role-arn arn:aws:iam::${ACCOUNT_ID}:role/AmazonEKS_EBS_CSI_DriverRole
+```
+
+### Step 6c: Verify the addon is active
+
+```bash
+aws eks describe-addon \
+  --cluster-name conduktor-eks \
+  --addon-name aws-ebs-csi-driver \
+  --query "addon.status" --output text
+```
+
+The status should be `ACTIVE`. It may take a minute or two to transition from `CREATING`.
+
+> **Not using eksctl?** You can install the EBS CSI driver addon from the AWS Console under **EKS > Clusters > conduktor-eks > Add-ons > Get more add-ons**, then select **Amazon EBS CSI Driver** and assign the IAM role you created.
+
+---
+
+## 7. Create an S3 Bucket for Monitoring
 
 Cortex (the monitoring component of Console) stores metrics data in S3.
 
@@ -291,7 +390,7 @@ Save the bucket name for `S3_BUCKET_NAME` in `config.env`.
 
 ---
 
-## 7. Enable OIDC Provider on EKS (for IRSA)
+## 8. Enable OIDC Provider on EKS (for IRSA)
 
 IRSA (IAM Roles for Service Accounts) lets Kubernetes pods assume IAM roles without static credentials. It requires an OIDC provider associated with your EKS cluster.
 
@@ -334,18 +433,18 @@ echo $OIDC_ID
 
 ---
 
-## 8. Create the IAM Role for AWS Load Balancer Controller
+## 9. Create the IAM Role for AWS Load Balancer Controller
 
 The AWS Load Balancer Controller runs inside EKS and creates ALBs/NLBs. It needs an IAM role with permissions to manage Elastic Load Balancing resources.
 
-### Step 8a: Download the IAM policy
+### Step 9a: Download the IAM policy
 
 ```bash
 curl -o alb-ingress-policy.json \
   https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.1/docs/install/iam_policy.json
 ```
 
-### Step 8b: Create the IAM policy
+### Step 9b: Create the IAM policy
 
 ```bash
 aws iam create-policy \
@@ -355,7 +454,7 @@ aws iam create-policy \
 
 Note the **Policy ARN** from the output.
 
-### Step 8c: Create the IAM role with a trust policy for IRSA
+### Step 9c: Create the IAM role with a trust policy for IRSA
 
 Replace `ACCOUNT_ID` and `OIDC_ID` with your values:
 
@@ -392,7 +491,7 @@ aws iam attach-role-policy \
   --policy-arn arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy
 ```
 
-### Step 8d: Get the role ARN
+### Step 9d: Get the role ARN
 
 ```bash
 aws iam get-role --role-name aws-load-balancer-controller \
@@ -400,6 +499,8 @@ aws iam get-role --role-name aws-load-balancer-controller \
 ```
 
 Save this for `AWS_LB_CONTROLLER_IRSA_ROLE_ARN` in `config.env`.
+
+> **Note**: Step 8 (OIDC provider) must be completed before this step, as the trust policy references the OIDC provider ID.
 
 Clean up the temporary files:
 
@@ -409,11 +510,11 @@ rm alb-ingress-policy.json alb-trust-policy.json
 
 ---
 
-## 9. Create the IAM Role for Cortex S3 Access
+## 10. Create the IAM Role for Cortex S3 Access
 
 Cortex (inside the Console pod) needs to read/write metrics to S3.
 
-### Step 9a: Create the IAM policy
+### Step 10a: Create the IAM policy
 
 Replace `conduktor-monitoring` with your bucket name:
 
@@ -446,7 +547,7 @@ aws iam create-policy \
 
 Note the **Policy ARN**.
 
-### Step 9b: Create the IAM role with a trust policy for IRSA
+### Step 10b: Create the IAM role with a trust policy for IRSA
 
 The Console pod runs in the `conduktor` namespace with a service account created by the Helm chart (typically named `conduktor-console`):
 
@@ -485,7 +586,7 @@ aws iam attach-role-policy \
   --policy-arn arn:aws:iam::${ACCOUNT_ID}:policy/ConduktorCortexS3Policy
 ```
 
-### Step 9c: Get the role ARN
+### Step 10c: Get the role ARN
 
 ```bash
 aws iam get-role --role-name conduktor-cortex-s3 \
@@ -502,120 +603,91 @@ rm cortex-s3-policy.json cortex-trust-policy.json
 
 ---
 
-## 10. Set Up Domain Names in AWS (Route 53)
+## 11. Choose Domain Names
 
-Before requesting an ACM certificate, you need domain names that you control. This section explains how domains and DNS work on AWS, and walks you through setting up Route 53 as your DNS provider.
+The Conduktor stack needs three domain names for its externally accessible services. In this guide, we use local-only domains with `/etc/hosts` so you do not need to purchase a domain or set up Route 53.
 
-### What is DNS and why do you need it?
+> **Want to use a real domain instead?** If you own a domain (or want to buy a cheap one like `.click` for ~$3/year), you can register it in Route 53, use real ACM certificates, and set up proper DNS records. Replace the `.conduktor.test` domains below with your real domains and request a DNS-validated ACM certificate in Step 12 instead of a self-signed one.
 
-DNS (Domain Name System) translates human-readable names like `console.conduktor.example.com` into IP addresses that computers use. When you deploy the Conduktor stack, the load balancers get auto-generated AWS hostnames like `k8s-condukt-consolea-abc123-456789.us-east-1.elb.amazonaws.com`. DNS lets you map your clean domain names to those load balancer addresses.
+### Domain names used in this guide
 
-### What is Route 53?
-
-Route 53 is Amazon's DNS service. It lets you:
-- **Register** new domain names (e.g. `example.com`)
-- **Host** DNS records for domains you own (even if registered elsewhere)
-- Create **ALIAS** records that point directly to AWS resources like ALBs (more efficient than CNAME)
-
-### Choose your domain names
-
-You need three domain names (they can be subdomains of one parent domain):
-
-| Service | Example Domain | Purpose |
+| Service | Domain | Purpose |
 |---|---|---|
-| Console | `console.conduktor.example.com` | Web UI for managing Kafka |
-| Gateway | `gateway.conduktor.example.com` | Admin API + Kafka proxy |
-| Keycloak | `oidc.example.com` | Identity provider for SSO |
+| Console | `console.conduktor.test` | Web UI for managing Kafka |
+| Gateway | `gateway.conduktor.test` | Admin API + Kafka proxy |
+| Keycloak | `oidc.conduktor.test` | Identity provider for SSO |
 
-You also need a wildcard for Gateway SNI routing: `*.gateway.conduktor.example.com`.
+You also need `*.gateway.conduktor.test` for Gateway SNI broker routing (e.g. `brokermain0.gateway.conduktor.test`).
 
-### Option A: Register a new domain in Route 53
+### How it works
 
-If you do not own a domain yet, you can register one directly in AWS:
+These `.test` domains do not exist on the internet. After deployment, you will map them to the ALB's IP address in your `/etc/hosts` file so your machine resolves them locally. The ALB will use a self-signed certificate (created in Step 12) for HTTPS.
 
-1. Go to **Route 53** in the AWS Console
-2. Click **Registered domains** > **Register domains**
-3. Search for a domain name and choose one (e.g. `conduktor-demo.com`)
-4. Complete the registration (prices vary, `.com` domains cost ~$13/year)
-5. AWS automatically creates a **hosted zone** for the domain
+### Set up `/etc/hosts` (after deployment)
 
-Verify the hosted zone was created:
+You cannot complete this step yet — the ALB does not exist until you run `make start-eks-stack`. Come back here after deployment:
 
 ```bash
-aws route53 list-hosted-zones --query "HostedZones[*].[Id,Name]" --output table
+# Get the ALB hostname
+ALB_HOST=$(kubectl get ingress console-alb-ingress -n conduktor \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+# Resolve it to an IP
+ALB_IP=$(dig +short $ALB_HOST | head -1)
+echo "ALB IP: $ALB_IP"
+
+# Add entries to /etc/hosts
+sudo sh -c "echo '$ALB_IP  console.conduktor.test gateway.conduktor.test oidc.conduktor.test' >> /etc/hosts"
 ```
 
-### Option B: Use an existing domain registered elsewhere
-
-If you already own a domain (e.g. from GoDaddy, Namecheap, Cloudflare), you can either:
-
-**B1. Create a hosted zone in Route 53 and delegate to it:**
+For Kafka SNI routing, also add an entry for each Gateway broker:
 
 ```bash
-# Create a hosted zone for your domain
-aws route53 create-hosted-zone \
-  --name example.com \
-  --caller-reference "conduktor-$(date +%s)"
+# Get the NLB hostname (Gateway Kafka proxy)
+NLB_HOST=$(kubectl get svc conduktor-gateway-external -n conduktor \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+NLB_IP=$(dig +short $NLB_HOST | head -1)
+
+sudo sh -c "echo '$NLB_IP  brokermain0.gateway.conduktor.test' >> /etc/hosts"
 ```
 
-This returns a set of NS (name server) records. Copy them:
-
-```bash
-aws route53 get-hosted-zone --id /hostedzone/Z1234567890 \
-  --query "DelegationSet.NameServers" --output text
-```
-
-Then go to your domain registrar (GoDaddy, Namecheap, etc.) and replace the existing name servers with the Route 53 name servers. This tells the internet that Route 53 is now responsible for DNS for your domain.
-
-> **Note**: Name server changes can take up to 48 hours to propagate globally, though it usually takes minutes to a few hours.
-
-**B2. Use a subdomain hosted zone (if you do not want to move your entire domain):**
-
-You can create a hosted zone just for a subdomain like `conduktor.example.com`:
-
-```bash
-aws route53 create-hosted-zone \
-  --name conduktor.example.com \
-  --caller-reference "conduktor-sub-$(date +%s)"
-```
-
-Then in your registrar's DNS settings, create NS records for `conduktor.example.com` pointing to the Route 53 name servers from the command above. This delegates only that subdomain to Route 53 while everything else stays with your current DNS provider.
-
-**B3. Skip Route 53 entirely:**
-
-You can manage DNS records directly in your existing DNS provider. After deployment, you will create CNAME records pointing your domains to the ALB/NLB hostnames. Skip the rest of this section and proceed to Step 11.
-
-### Verify your hosted zone
-
-Regardless of which option you chose, confirm that Route 53 has a hosted zone for your domain:
-
-```bash
-aws route53 list-hosted-zones --query "HostedZones[*].[Id,Name]" --output table
-```
-
-Note the **Hosted Zone ID** (e.g. `Z1234567890`) — you will need it when creating DNS records after deployment.
-
-Test that DNS resolution works for your zone (the NS query should return Route 53 name servers):
-
-```bash
-dig NS example.com +short
-```
-
-If the name servers match the Route 53 ones, your domain is correctly delegated.
+> **Limitations of `/etc/hosts`**:
+> - Only works on **your machine** — no one else can reach the domains
+> - ALB/NLB IPs can **change over time** — you may need to update `/etc/hosts` if the load balancer is recreated
+> - You will need to **accept the self-signed certificate warning** in your browser
+> - Not suitable for production or shared environments
 
 ---
 
-## 11. Request an ACM Certificate
+## 12. Create an ACM Certificate (Self-Signed)
 
-The ALB uses an AWS Certificate Manager (ACM) certificate for HTTPS termination. You need a single certificate covering all three domains.
+The ALB requires an ACM (AWS Certificate Manager) certificate for HTTPS. Since we are using local `.test` domains, we will generate a self-signed certificate and import it into ACM. ACM does not validate imported certificates — it just stores them.
 
-### Step 11a: Request the certificate
+> **Using a real domain?** If you own a real domain, you can request a DNS-validated certificate instead:
+> ```bash
+> aws acm request-certificate \
+>   --domain-name console.yourdomain.com \
+>   --subject-alternative-names gateway.yourdomain.com oidc.yourdomain.com \
+>   --validation-method DNS --region us-east-1
+> ```
+> Then create the DNS validation CNAME records in your DNS provider and wait for the status to become `ISSUED`. Skip the self-signed steps below.
+
+### Step 12a: Generate a self-signed certificate
 
 ```bash
-aws acm request-certificate \
-  --domain-name console.conduktor.example.com \
-  --subject-alternative-names gateway.conduktor.example.com oidc.example.com \
-  --validation-method DNS \
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout self-signed.key \
+  -out self-signed.crt \
+  -subj "/CN=*.conduktor.test" \
+  -addext "subjectAltName=DNS:*.conduktor.test,DNS:console.conduktor.test,DNS:gateway.conduktor.test,DNS:oidc.conduktor.test"
+```
+
+### Step 12b: Import into ACM
+
+```bash
+aws acm import-certificate \
+  --certificate fileb://self-signed.crt \
+  --private-key fileb://self-signed.key \
   --region us-east-1
 ```
 
@@ -623,63 +695,15 @@ Note the **CertificateArn** from the output.
 
 > **Important**: The certificate must be in the **same region** as your EKS cluster.
 
-### Step 11b: Validate the certificate
-
-ACM needs to verify that you own the domains. For DNS validation, it gives you CNAME records to create.
+### Step 12c: Clean up the local key files
 
 ```bash
-aws acm describe-certificate \
-  --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234 \
-  --query "Certificate.DomainValidationOptions"
-```
-
-For each domain, create a CNAME record in your DNS provider:
-
-| Record Name | Record Value |
-|---|---|
-| `_xxxx.console.conduktor.example.com` | `_yyyy.acm-validations.aws.` |
-| `_xxxx.gateway.conduktor.example.com` | `_yyyy.acm-validations.aws.` |
-| `_xxxx.oidc.example.com` | `_yyyy.acm-validations.aws.` |
-
-If you use Route 53 (set up in Step 10), you can automate this:
-
-```bash
-# The ACM console has a "Create record in Route 53" button that does this automatically
-# Or use the CLI — first get the validation CNAME details, then create Route 53 records
-```
-
-Wait for the certificate status to become `ISSUED` (usually takes a few minutes):
-
-```bash
-aws acm describe-certificate \
-  --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234 \
-  --query "Certificate.Status" --output text
+rm self-signed.key self-signed.crt
 ```
 
 Save the certificate ARN for `ACM_CERTIFICATE_ARN` in `config.env`.
 
----
-
-## 12. Prepare DNS Records
-
-You will need DNS records for three domains. **These records will point to the load balancers created during deployment**, so you cannot fully set them up yet. However, you should decide on domain names now and ensure you have control over the DNS zone.
-
-### Domains you need
-
-| Domain | Purpose | Load Balancer Type |
-|---|---|---|
-| `console.conduktor.example.com` | Console web UI | ALB (HTTPS :443) |
-| `gateway.conduktor.example.com` | Gateway admin API | ALB (HTTPS :443) |
-| `*.gateway.conduktor.example.com` | Gateway Kafka broker SNI routing | NLB (TCP :9092) |
-| `oidc.example.com` | Keycloak OIDC provider | ALB (HTTPS :443) |
-
-### If using Route 53
-
-After deployment, you will create ALIAS records pointing to the ALB and NLB DNS names. See the **Set up DNS** section in [README.md](./README.md).
-
-### If using an external DNS provider
-
-After deployment, you will create CNAME records pointing to the ALB and NLB DNS names.
+> **Note**: Imported certificates are not auto-renewed by ACM. If the certificate expires (after 365 days), regenerate and reimport it.
 
 ---
 
@@ -722,34 +746,34 @@ export EKS_CLUSTER_NAME=conduktor-eks
 # The kubectl context from Step 5
 export KUBE_CONTEXT="arn:aws:eks:us-east-1:123456789012:cluster/conduktor-eks"
 
-# Your chosen domain names
-export CONSOLE_DOMAIN=console.conduktor.example.com
-export GATEWAY_DOMAIN=gateway.conduktor.example.com
-export OIDC_DOMAIN=oidc.example.com
+# Domain names (matching /etc/hosts from Step 11)
+export CONSOLE_DOMAIN=console.conduktor.test
+export GATEWAY_DOMAIN=gateway.conduktor.test
+export OIDC_DOMAIN=oidc.conduktor.test
 
-# The ACM certificate ARN from Step 11
+# The ACM certificate ARN from Step 12 (self-signed)
 export ACM_CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/abcd-1234
 
-# The S3 bucket name from Step 6
+# The S3 bucket name from Step 7
 export S3_BUCKET_NAME=conduktor-monitoring
 export S3_REGION=${AWS_REGION}
 
-# The Cortex IRSA role ARN from Step 9
+# The Cortex IRSA role ARN from Step 10
 export CORTEX_IRSA_ROLE_ARN=arn:aws:iam::123456789012:role/conduktor-cortex-s3
 
-# The VPC ID from Step 3
+# The VPC ID from Step 4
 export VPC_ID=vpc-0abc123def456
 
-# The ALB controller IRSA role ARN from Step 8
+# The ALB controller IRSA role ARN from Step 9
 export AWS_LB_CONTROLLER_IRSA_ROLE_ARN=arn:aws:iam::123456789012:role/aws-load-balancer-controller
 ```
 
 Also update `provisioning/terraform.tfvars` to match your domain names:
 
 ```hcl
-console_base_url  = "https://console.conduktor.example.com"
-gateway_base_url  = "https://gateway.conduktor.example.com"
-bootstrap_servers = "gateway.conduktor.example.com:9092"
+console_base_url  = "https://console.conduktor.test"
+gateway_base_url  = "https://gateway.conduktor.test"
+bootstrap_servers = "gateway.conduktor.test:9092"
 ```
 
 ---
@@ -762,23 +786,39 @@ Verify everything before proceeding to deployment:
 - [ ] **kubectl** installed and `kubectl get nodes` returns your EKS worker nodes
 - [ ] **helm**, **terraform**, **yq**, **envsubst**, **keytool**, **openssl** installed
 - [ ] **EKS cluster** created and running with at least 3 worker nodes (`m5.xlarge` or bigger)
-- [ ] **OIDC provider** associated with the EKS cluster (Step 7)
-- [ ] **S3 bucket** created for monitoring data
-- [ ] **IAM role for ALB controller** created with IRSA trust policy (Step 8)
-- [ ] **IAM role for Cortex S3** created with IRSA trust policy (Step 9)
-- [ ] **Domain names** configured in Route 53 (or external DNS provider) (Step 10)
-- [ ] **ACM certificate** issued and status is `ISSUED` (Step 11)
-- [ ] **DNS zone** ready — you have control over the domains you chose
-- [ ] **Conduktor license** set as `LICENSE` env var or in `.env` file
-- [ ] **config.env** filled in with all values
-- [ ] **terraform.tfvars** updated with your domain names
+- [ ] **EBS CSI Driver** installed as an EKS addon (Step 6)
+- [ ] **OIDC provider** associated with the EKS cluster (Step 8)
+- [ ] **S3 bucket** created for monitoring data (Step 7)
+- [ ] **IAM role for ALB controller** created with IRSA trust policy (Step 9)
+- [ ] **IAM role for Cortex S3** created with IRSA trust policy (Step 10)
+- [ ] **Domain names** chosen (Step 11)
+- [ ] **ACM certificate** imported — self-signed certificate ARN noted (Step 12)
+- [ ] **Conduktor license** set as `LICENSE` env var or in `.env` file (Step 13)
+- [ ] **config.env** filled in with all values (Step 14)
+- [ ] **terraform.tfvars** updated with your domain names (Step 14)
 
 Once everything is checked, proceed to deploy:
 
 ```bash
 make start-eks-stack
+```
+
+After `start-eks-stack` completes, **set up `/etc/hosts`** as described in Step 11 before continuing:
+
+```bash
+ALB_HOST=$(kubectl get ingress console-alb-ingress -n conduktor \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+ALB_IP=$(dig +short $ALB_HOST | head -1)
+sudo sh -c "echo '$ALB_IP  console.conduktor.test gateway.conduktor.test oidc.conduktor.test' >> /etc/hosts"
+```
+
+Then continue with:
+
+```bash
 make install-conduktor-platform
 make init-conduktor-platform
 ```
+
+Access the Console at `https://console.conduktor.test` (accept the self-signed certificate warning).
 
 See [README.md](./README.md) for full deployment instructions and tuning.

@@ -40,4 +40,5 @@ tls:
   pemChainIncluded: true
 controller:
   persistence:
+    storageClass: gp3
     size: 10Gi
