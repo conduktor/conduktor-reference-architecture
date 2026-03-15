@@ -1,3 +1,9 @@
+locals {
+  # Use internal URL for cluster definitions (Console connects from inside the cluster)
+  # Fall back to external URL if internal URL is not set
+  gateway_cluster_url = var.gateway_internal_url != "" ? var.gateway_internal_url : var.gateway_base_url
+}
+
 # Admin group should be imported as it already exists in Console
 resource "conduktor_console_group_v2" "admin" {
   provider = conduktor.console
@@ -63,7 +69,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = "${local.gateway_cluster_url}:8888"
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
@@ -85,7 +91,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = "${local.gateway_cluster_url}:8888"
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }

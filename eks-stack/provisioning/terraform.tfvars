@@ -5,11 +5,14 @@ console_base_url       = "https://console.conduktor.test"
 console_admin_user     = "admin@demo.dev"
 console_admin_password = "adminP4ss!"
 
+# External URL — used by Terraform provider running on your local machine
 gateway_base_url       = "https://gateway.conduktor.test"
+# Internal URL — used by Console for cluster-to-cluster communication inside the cluster
+gateway_internal_url   = "https://conduktor-gateway-internal.conduktor.svc.cluster.local"
 gateway_admin_user     = "admin"
 gateway_admin_password = "adminP4ss!"
 
-bootstrap_servers = "gateway.conduktor.test:9092"
+bootstrap_servers = "conduktor-gateway-internal.conduktor.svc.cluster.local:9092"
 
 gateway_token_lifetime_seconds = 2630000  # 1 month
 

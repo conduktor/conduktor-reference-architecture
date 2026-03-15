@@ -3,7 +3,7 @@ gateway:
     repository: conduktor/conduktor-gateway
     tag: nightly
 
-  replicas: 2
+  replicas: 1
   resources:
     # reduce resource requests for example purpose.
     requests:
@@ -51,6 +51,12 @@ gateway:
     # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     GATEWAY_SHUTDOWN_DELAY_BETWEEN_BROKERS_MS: "20000"
+
+    GATEWAY_FEATURE_FLAGS_HAPROXY_PROTOCOL: true
+
+    #LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: debug
+    #LOG4J2_IO_CONDUKTOR_UPSTREAM_THREAD_LEVEL: debug
+    #JAVA_OPTS: "-Djavax.net.debug=ssl:handshake"
 
   volumes:
     # Mount truststore secrets for kafka and http client

@@ -16,8 +16,14 @@ variable "console_admin_password" {
 }
 
 variable "gateway_base_url" {
-  description = "Base URL for the Conduktor Gateway"
+  description = "Base URL for the Conduktor Gateway (external, reachable from Terraform)"
   type        = string
+}
+
+variable "gateway_internal_url" {
+  description = "Base URL for the Conduktor Gateway (internal, reachable from within the cluster)"
+  type        = string
+  default     = ""
 }
 
 variable "gateway_admin_user" {

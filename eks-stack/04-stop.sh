@@ -35,8 +35,15 @@ echo "Removing Grafana CRDs..."
 kubectl delete -f ${SCRIPT_DIR}/manifests/04-grafana-crds.yaml 2>/dev/null || true
 
 echo
-echo "Removing CoreDNS custom config..."
-envsubst '$GATEWAY_DOMAIN_ESCAPED $OIDC_DOMAIN_ESCAPED' < ${SCRIPT_DIR}/manifests/05-coredns-custom.yaml | kubectl delete -f - 2>/dev/null || true
+echo "Removing CoreDNS rewrite rules..."
+CURRENT_COREFILE=$(kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null || true)
+if echo "$CURRENT_COREFILE" | grep -q "conduktor-gateway"; then
+  UPDATED_COREFILE=$(echo "$CURRENT_COREFILE" | grep -v "conduktor-gateway\|keycloak\.cdk-deps")
+  kubectl get configmap coredns -n kube-system -o json | \
+    jq --arg corefile "$UPDATED_COREFILE" '.data.Corefile = $corefile' | \
+    kubectl apply -f - 2>/dev/null || true
+  kubectl -n kube-system delete pod -l k8s-app=kube-dns 2>/dev/null || true
+fi
 
 echo
 echo "Uninstalling Helm releases..."

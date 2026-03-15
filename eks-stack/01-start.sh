@@ -141,8 +141,21 @@ kubectl apply -f ${SCRIPT_DIR}/manifests/04-grafana-crds.yaml
 
 echo
 echo "10 - Update CoreDNS config for Gateway SNI routing"
-envsubst '$GATEWAY_DOMAIN_ESCAPED $OIDC_DOMAIN_ESCAPED' < ${SCRIPT_DIR}/manifests/05-coredns-custom.yaml | kubectl apply -f -
-# Restart CoreDNS pods to pick up custom configuration
+# EKS CoreDNS does not support coredns-custom ConfigMap — patch the Corefile directly
+CURRENT_COREFILE=$(kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}')
+if echo "$CURRENT_COREFILE" | grep -q "conduktor-gateway"; then
+  echo "CoreDNS rewrite rules already present, skipping..."
+else
+  # Insert rewrite rules after the "ready" line in the Corefile
+  REWRITE_RULES="    rewrite name regex .*${GATEWAY_DOMAIN_ESCAPED} conduktor-gateway-external.conduktor.svc.cluster.local answer auto\n    rewrite name regex ${OIDC_DOMAIN_ESCAPED} keycloak.cdk-deps.svc.cluster.local answer auto"
+  UPDATED_COREFILE=$(echo "$CURRENT_COREFILE" | sed "/^[[:space:]]*ready$/a\\
+${REWRITE_RULES}")
+  kubectl get configmap coredns -n kube-system -o json | \
+    jq --arg corefile "$UPDATED_COREFILE" '.data.Corefile = $corefile' | \
+    kubectl apply -f -
+  echo "CoreDNS rewrite rules added"
+fi
+# Restart CoreDNS pods to pick up configuration changes
 kubectl -n kube-system delete pod -l k8s-app=kube-dns
 
 echo
@@ -158,6 +171,7 @@ echo
 echo "12 - Creating ALB Ingress resources"
 
 # ALB Ingress for Console
+# Uses group.name to merge all three ingresses into a single ALB
 envsubst '$CONSOLE_DOMAIN $ACM_CERTIFICATE_ARN' <<'INGRESS_EOF' | kubectl apply -f -
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -166,6 +180,7 @@ metadata:
   namespace: conduktor
   annotations:
     kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: conduktor-alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
@@ -184,7 +199,7 @@ spec:
               service:
                 name: conduktor-console
                 port:
-                  number: 443
+                  number: 80
 INGRESS_EOF
 
 # ALB Ingress for Gateway admin API
@@ -196,6 +211,7 @@ metadata:
   namespace: conduktor
   annotations:
     kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: conduktor-alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
@@ -226,6 +242,7 @@ metadata:
   namespace: cdk-deps
   annotations:
     kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: conduktor-alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
@@ -247,8 +264,29 @@ spec:
                   name: https
 INGRESS_EOF
 
-echo
-echo "EKS stack deployment complete!"
-echo "Next steps:"
-echo "  1. make install-conduktor-platform"
-echo "  2. make init-conduktor-platform"
+cat <<EOF
+
+EKS stack deployment complete!
+
+Next steps:
+  1. Get the ALB IP:
+     ALB_HOST=\$(kubectl get ingress console-alb-ingress -n conduktor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+     dig +short \$ALB_HOST | head -1
+
+  2. Import the ALB certificate into the local truststore:
+     openssl s_client -connect \$ALB_HOST:443 -servername ${CONSOLE_DOMAIN} </dev/null 2>/dev/null | openssl x509 -outform PEM > alb-cert.crt
+     keytool -importcert -noprompt -alias alb-self-signed -file alb-cert.crt -keystore ${SCRIPT_DIR}/truststore.jks -storepass conduktor
+     rm -f alb-cert.crt
+
+  3. make install-conduktor-platform
+
+  4. Get the NLB IP (available after Gateway is installed):
+     NLB_HOST=\$(kubectl get svc conduktor-gateway-external -n conduktor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+     dig +short \$NLB_HOST | head -1
+
+  5. Update /etc/hosts with separate ALB and NLB IPs:
+     <ALB_IP>  ${CONSOLE_DOMAIN} ${OIDC_DOMAIN}
+     <NLB_IP>  ${GATEWAY_DOMAIN} brokermain0.${GATEWAY_DOMAIN}
+
+  6. make init-conduktor-platform
+EOF
