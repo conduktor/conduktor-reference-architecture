@@ -52,7 +52,7 @@ gateway:
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     GATEWAY_SHUTDOWN_DELAY_BETWEEN_BROKERS_MS: "20000"
 
-    GATEWAY_FEATURE_FLAGS_HAPROXY_PROTOCOL: true
+    #GATEWAY_FEATURE_FLAGS_HAPROXY_PROTOCOL: "true"
 
     #LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: debug
     #LOG4J2_IO_CONDUKTOR_UPSTREAM_THREAD_LEVEL: debug
@@ -86,6 +86,8 @@ service:
       service.beta.kubernetes.io/aws-load-balancer-type: "external"
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
       service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      #service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+      #service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "TCP"
 
 # Mount keystore for TLS
 tls:

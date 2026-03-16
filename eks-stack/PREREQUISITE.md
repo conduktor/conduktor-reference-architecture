@@ -441,7 +441,7 @@ The AWS Load Balancer Controller runs inside EKS and creates ALBs/NLBs. It needs
 
 ```bash
 curl -o alb-ingress-policy.json \
-  https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.1/docs/install/iam_policy.json
+  https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
 ```
 
 ### Step 9b: Create the IAM policy
@@ -801,9 +801,10 @@ Once everything is checked, proceed to deploy:
 
 ```bash
 make start-eks-stack
+make install-conduktor-platform
 ```
 
-After `start-eks-stack` completes, **set up `/etc/hosts`** as described in Step 11 before continuing:
+After `install-conduktor-platform` completes, **set up `/etc/hosts`** as described in Step 11 before continuing:
 
 ```bash
 ALB_HOST=$(kubectl get ingress console-alb-ingress -n conduktor \
@@ -815,7 +816,7 @@ sudo sh -c "echo '$ALB_IP  console.conduktor.test gateway.conduktor.test oidc.co
 Then continue with:
 
 ```bash
-make install-conduktor-platform
+
 make init-conduktor-platform
 ```
 

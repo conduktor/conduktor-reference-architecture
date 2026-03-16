@@ -92,22 +92,10 @@ Runs Terraform to create users, groups, clusters, interceptors, and self-service
 After deployment, map the local `.test` domains to the ALB/NLB IP addresses:
 
 ```bash
-# Get the ALB hostname and resolve to IP
-ALB_HOST=$(kubectl get ingress console-alb-ingress -n conduktor \
-  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-ALB_IP=$(dig +short $ALB_HOST | head -1)
-
-# Add entries for Console, Gateway admin, and Keycloak
-sudo sh -c "echo '$ALB_IP  console.conduktor.test gateway.conduktor.test oidc.conduktor.test' >> /etc/hosts"
-
-# Get the NLB hostname for Gateway Kafka proxy
-NLB_HOST=$(kubectl get svc conduktor-gateway-external -n conduktor \
-  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-NLB_IP=$(dig +short $NLB_HOST | head -1)
-
-# Add SNI broker routing entry
-sudo sh -c "echo '$NLB_IP  brokermain0.gateway.conduktor.test' >> /etc/hosts"
+./get-hosts.sh
 ```
+
+Then copy and paste the output into /etc/hosts (may need sudo access).
 
 > **Using real domains?** If you own a domain, create DNS records instead: point `console.yourdomain.com`, `gateway.yourdomain.com`, `oidc.yourdomain.com` to the ALB address, and `*.gateway.yourdomain.com` to the NLB address.
 
@@ -117,6 +105,78 @@ sudo sh -c "echo '$NLB_IP  brokermain0.gateway.conduktor.test' >> /etc/hosts"
 - Gateway admin API: `https://gateway.conduktor.test`
 - Kafka proxy: `gateway.conduktor.test:9092`
 - Keycloak admin: `https://oidc.conduktor.test/admin` (admin / conduktor)
+
+### Conduktor Console
+
+You can then access Conduktor Console at [https://console.conduktor.test](https://console.conduktor.test)
+
+You can then login using the following credentials :
+
+| Account Type   | Username                                     | Password   | Groups    |
+|----------------|----------------------------------------------|------------|-----------|
+| local          | admin@demo.dev                               | adminP4ss! | admin     |
+| sso (keycloak) | conduktor-admin / conduktor-admin@company.io | conduktor  | admin     |
+| sso (keycloak) | alice / alice@company.io                     | alice      | project-a |
+| sso (keycloak) | bob / alice@company.io                       | bob        | project-b |
+
+You will be able to create topics and otherwise interact with both Kafka Cluster and Conduktor Gateway.
+
+The connection to Conduktor Gateway uses SASL PLAIN with a credential generated earlier in the previous step.
+
+### Conduktor Gateway
+
+You can reach the Conduktor Gateway Admin API at [https://gateway.conduktor.test](https://gateway.conduktor.test).
+
+```bash
+curl -k -u admin:adminP4ss! \
+    'https://gateway.conduktor.test/gateway/v2/interceptor'
+```
+
+You can reach Kafka through Gateway using SASL OAuthbearer (see client.properties file). Here we assume `kafka-topics` is installed locally and is running Apache Kafka version 4 or greater.
+
+```bash
+# Need to set truststore at the JVM level to authenticate with OIDC
+export KAFKA_OPTS="-Djava.security.manager=allow \
+-Djavax.net.ssl.trustStore=./truststore.jks \
+-Djavax.net.ssl.trustStorePassword=conduktor \
+-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://oidc.conduktor.test/realms/conduktor-realm/protocol/openid-connect/token"
+```
+
+```bash
+kafka-topics --list \
+    --bootstrap-server gateway.conduktor.test:9092 \
+    --command-config client.properties
+```
+
+Alternatively, to run a Kafka client on an older version, you can use this docker command:
+
+```bash
+docker run --rm --network host \
+  -e KAFKA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor" \
+  -v $PWD/truststore.jks:/tmp/truststore.jks \
+  -v $PWD/client_pre_ak4.properties:/tmp/client.properties \
+  apache/kafka:3.8.0 /opt/kafka/bin/kafka-topics.sh \
+    --bootstrap-server gateway.conduktor.test:9092 \
+    --command-config /tmp/client.properties \
+    --list
+```
+
+### Identity Provider
+
+You can also manage OIDC keycloak server at [https://oidc.conduktor.test](https://oidc.localhost) with the following credentials `admin` / `conduktor`.
+
+### Grafana Dashboards
+
+Port forward grafana to take a look at the dashboards.
+
+```bash
+kubectl port-forward svc/grafana-service -n monitoring 3000:3000
+```
+
+Go to [http://localhost:3000](http://localhost:3000) and log in with `admin` and `admin` for username, password to explore the dashboards that ship with the Conduktor helm charts.
+
+Press `Ctrl+C` to kill the port forward.
+
 
 ## Teardown
 

@@ -269,24 +269,12 @@ cat <<EOF
 EKS stack deployment complete!
 
 Next steps:
-  1. Get the ALB IP:
-     ALB_HOST=\$(kubectl get ingress console-alb-ingress -n conduktor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-     dig +short \$ALB_HOST | head -1
+  1. make install-conduktor-platform
 
-  2. Import the ALB certificate into the local truststore:
-     openssl s_client -connect \$ALB_HOST:443 -servername ${CONSOLE_DOMAIN} </dev/null 2>/dev/null | openssl x509 -outform PEM > alb-cert.crt
-     keytool -importcert -noprompt -alias alb-self-signed -file alb-cert.crt -keystore ${SCRIPT_DIR}/truststore.jks -storepass conduktor
-     rm -f alb-cert.crt
+  2. Copy the output of the following command into /etc/hosts
+     ./get-hosts.sh
 
-  3. make install-conduktor-platform
+  3. make init-conduktor-platform
 
-  4. Get the NLB IP (available after Gateway is installed):
-     NLB_HOST=\$(kubectl get svc conduktor-gateway-external -n conduktor -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-     dig +short \$NLB_HOST | head -1
-
-  5. Update /etc/hosts with separate ALB and NLB IPs:
-     <ALB_IP>  ${CONSOLE_DOMAIN} ${OIDC_DOMAIN}
-     <NLB_IP>  ${GATEWAY_DOMAIN} brokermain0.${GATEWAY_DOMAIN}
-
-  6. make init-conduktor-platform
+  4. Have fun with Console and Gateway!!
 EOF
