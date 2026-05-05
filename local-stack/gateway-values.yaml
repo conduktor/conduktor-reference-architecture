@@ -57,10 +57,18 @@ gateway:
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
     GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
 
+    # Keystore for Gateway TLS certificate
+    # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
     GATEWAY_SSL_KEY_TYPE: "JKS"
 
-    # Gateway HTTPS admin API TLS
+    # Truststore for mTLS authentication of Gateway clients
+    # GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
+
+    # Gateway HTTP API
+    # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    # Truststore for mTLS authentication of Gateway clients
+    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
 
   volumes:
     # Mount truststore secrets for kafka and http client
