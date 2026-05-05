@@ -205,12 +205,12 @@ spec:
       - conduktor
   commonName: gateway.conduktor.localhost
   dnsNames:
-    - gateway.conduktor.localhost
-    - "*.gateway.conduktor.localhost"
-    - conduktor-gateway-internal.conduktor.svc.cluster.local
-    - "*.conduktor-gateway-internal.conduktor.svc.cluster.local"
-    - conduktor-gateway-external.conduktor.svc.cluster.local
-    - "*.conduktor-gateway-external.conduktor.svc.cluster.local"
+    - gateway.conduktor.localhost # External Bootstrap Server
+    - "*.gateway.conduktor.localhost" # External Brokers wildcard for SNI brokers pattern broker{{nodeId}}.gateway.conduktor.localhost
+    - conduktor-gateway-internal.conduktor.svc.cluster.local # Internal Bootstrap Server
+    - conduktor-gateway-broker-0.conduktor.svc.cluster.local # Internal Brokers explicit 
+    - conduktor-gateway-broker-1.conduktor.svc.cluster.local
+    - conduktor-gateway-broker-2.conduktor.svc.cluster.local
   issuerRef:
     name: local-ca-issuer
     kind: ClusterIssuer

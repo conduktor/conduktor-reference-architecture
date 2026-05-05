@@ -56,8 +56,7 @@ echo "04 - Installing dependencies CRDs"
 kubectl apply -f ${STACK_DIR}/04-components-crds.yaml
 
 echo
-echo "05 - Update KubeDNS config for Gateway SNI routing"
-# restart kube-dns to make sure it picks up custom coreDNS configuration
+echo "05 - Update KubeDNS config"
 kubectl apply -f ${STACK_DIR}/05-coredns-custom.yaml
 kubectl -n kube-system delete pod -l k8s-app=kube-dns
 

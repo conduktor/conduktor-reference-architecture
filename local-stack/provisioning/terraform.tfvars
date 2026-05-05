@@ -8,7 +8,7 @@ gateway_base_url       = "https://gateway.conduktor.localhost"
 gateway_admin_user     = "admin"
 gateway_admin_password = "adminP4ss!"
 
-bootstrap_servers = "gateway.conduktor.localhost:9092"
+bootstrap_servers = "conduktor-gateway-internal.conduktor.svc.cluster.local:9093"
 
 gateway_token_lifetime_seconds = 2630000  # 1 month
 

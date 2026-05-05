@@ -107,7 +107,7 @@ The connection to Conduktor Gateway uses SASL PLAIN with a credential generated 
 
 ### Conduktor Gateway
 
-You can reach the Conduktor Gateway Admin API at [https://gateway.conduktor.localhost](https://gateway.conduktor.localhost).
+You can reach the Conduktor Gateway Admin API at [https://gateway.conduktor.localhost](https://gateway.conduktor.localhost) with authentication `admin`/`adminP4ss!`.
 
 ```bash
 curl -k -u admin:adminP4ss! \
