@@ -1,4 +1,4 @@
-# Conduktor recommended architecture
+# Conduktor recommended architecture asdf
 
 This repository goal is to provide a **recommended architecture** for deploying Conduktor platform (Console and Gateway) in production ready environment that will match most of the needs.
 
