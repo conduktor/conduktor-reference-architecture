@@ -121,6 +121,8 @@ You can reach Kafka through Gateway using SASL OAuthbearer (see client.propertie
 export KAFKA_OPTS="-Djava.security.manager=allow \
 -Djavax.net.ssl.trustStore=./truststore.jks \
 -Djavax.net.ssl.trustStorePassword=conduktor \
+-Djavax.net.ssl.keyStore=./keystore.jks \
+-Djavax.net.ssl.keyStorePassword=conduktor \
 -Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/token"
 ```
 
@@ -136,12 +138,17 @@ Alternatively, to run a Kafka client on an older version, you can use this docke
 docker run --rm --network host \
   -e KAFKA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor" \
   -v $PWD/truststore.jks:/tmp/truststore.jks \
+  -v $PWD/keystore.jks:/tmp/keystore.jks \
   -v $PWD/client_pre_ak4.properties:/tmp/client.properties \
   apache/kafka:3.8.0 /opt/kafka/bin/kafka-topics.sh \
     --bootstrap-server gateway.conduktor.localhost:9092 \
     --command-config /tmp/client.properties \
     --list
 ```
+
+> The Gateway external listener is configured with `sslClientAuth: REQUIRE`,
+> so a client `keystore.jks` is required alongside the `truststore.jks`.
+> Both files are exported to this directory by `make start-local-stack`.
 
 ### Identity Provider
 

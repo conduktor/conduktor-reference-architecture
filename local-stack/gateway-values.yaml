@@ -12,15 +12,15 @@ gateway:
     listeners: true
 
   securityMode: "GATEWAY_MANAGED"
-
+  kafka:
+    brokerIds:
+      - "0-2"
   listeners:
     internal:
       securityProtocol: SASL_SSL
       routing: sni
       ports:
         - "9093"
-      brokerIds:
-        - "0-2"
       sslClientAuth: "REQUIRE"
     external:
       securityProtocol: SASL_SSL
@@ -46,9 +46,15 @@ gateway:
     KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
     KAFKA_SASL_MECHANISM: "PLAIN"
 
-    # Truststore for Gateway kafka client -> Kafka brokers
-    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/truststore/truststore.jks
+    # Truststore for Gateway kafka client -> backend Kafka brokers.
+    # Contains only the kafka-stack-ca (signs kafka brokers + schema registry).
+    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/kafka-trust/truststore.jks
     KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
+
+    # Listener mTLS truststore (clients -> Gateway). Contains conduktor-ca
+    # (Console client cert) + ext-client-ca (external Kafka clients).
+    GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/listener-trust/truststore.jks
+    GATEWAY_SSL_TRUST_STORE_TYPE: "JKS"
 
     # console-sa/client-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
     GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
@@ -61,25 +67,35 @@ gateway:
     # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
     GATEWAY_SSL_KEY_TYPE: "JKS"
 
-    # Truststore for mTLS authentication of Gateway clients
-    # GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
-
-    # Gateway HTTP API
-    # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
+    # Gateway HTTPS Admin API keystore is wired by the chart via
+    # tls.certManager.httpsAdminApi.enabled: true (same cert-manager keystore).
     GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
-    # Truststore for mTLS authentication of Gateway clients
-    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+    # Admin API mTLS not enabled here; would mirror the listener pattern.
+    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/listener-trust/truststore.jks"
 
   volumes:
-    # Mount truststore secrets for kafka and http client
-    - name: truststore
+    # Three trust-manager Bundle mounts — one per trust domain so each
+    # truststore can evolve independently. All mounted under
+    # /etc/conduktor/tls/* (away from /etc/gateway/tls/ which the chart owns).
+    - name: listener-trust       # clients -> Gateway listener mTLS
       secret:
-        secretName: bundle-truststore # secret with truststore.jks containing kafka and schema registry certificates
+        secretName: gateway-clients-trust
+    - name: kafka-trust          # Gateway -> backend Kafka brokers
+      secret:
+        secretName: kafka-stack-trust
+    - name: ext-services-trust   # Gateway HTTPS calls (OIDC, interceptors) + JVM-default 
+      secret:
+        secretName: ext-services-trust
 
   volumeMounts:
-    # Mount truststore secrets for kafka and http client
-    - name: truststore
-      mountPath: /etc/conduktor/tls/truststore
+    - name: listener-trust
+      mountPath: /etc/conduktor/tls/listener-trust
+      readOnly: true
+    - name: kafka-trust
+      mountPath: /etc/conduktor/tls/kafka-trust
+      readOnly: true
+    - name: ext-services-trust
+      mountPath: /etc/conduktor/tls/ext-services-trust
       readOnly: true
 
   admin:
@@ -91,12 +107,24 @@ service:
     enable: true
     type: LoadBalancer
 
-# Mount keystore for TLS
+# Gateway server cert: issued by conduktor-issuer (per-service CA).
+# Listener mTLS truststore is NOT chart-managed here, we supply our own
+# Bundle-backed JKS via gateway-clients-trust (see gateway.volumes above)
+# and wire GATEWAY_SSL_TRUST_STORE_PATH manually.
 tls:
-  enable: true
-  secretRef: "gateway-tls-secret"
-  keystoreKey: keystore.jks
-  keystoreFile: keystore.jks
+  keystore:
+    passwordSecretRef:
+      name: conduktor-gateway-jks-password-secret
+      key: password
+  certManager:
+    enabled: true
+    issuerRef:
+      name: conduktor-issuer
+      kind: ClusterIssuer
+    truststore:
+      enabled: false # using gateway-clients-trust Bundle instead
+    httpsAdminApi:
+      enabled: true
 
 metrics:
   prometheus:
