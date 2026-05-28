@@ -30,6 +30,11 @@ echo "Waiting for certificates secrets to be created"
 waitSecretCreated cdk-deps pg-main-crt-secret
 waitSecretCreated cdk-deps pg-sql-crt-secret
 waitSecretCreated cdk-deps s3-crt-secret
+# trust-manager Bundles distribute the per-domain truststores to labeled namespaces.
+# kafka-stack-trust is consumed by SR (cdk-deps) and Gateway (conduktor);
+# console-trust covers everything Console needs.
+waitSecretCreated cdk-deps kafka-stack-trust
+waitSecretCreated conduktor console-trust
 
 echo
 echo "03 - Installing Conduktor dependencies components"
@@ -47,8 +52,6 @@ waitRollout cdk-deps sts/main-postgresql
 #waitAvailable cdk-deps deployment/s3-minio
 waitRollout cdk-deps sts/kafka-controller
 
-# generate truststore for Schema registry using Kafka certificates
-generate_schema_registry_jks_truststore
 kubectl apply -f ${STACK_DIR}/03-components/schema-registry.yaml
 
 echo
@@ -60,8 +63,9 @@ echo "05 - Update KubeDNS config"
 kubectl apply -f ${STACK_DIR}/05-coredns-custom.yaml
 kubectl -n kube-system delete pod -l k8s-app=kube-dns
 
-# Extract and package all certificates into a JKS truststore for Conduktor Gateway and Conduktor Console
-generate_jks_truststore
-
-# Download the truststore to the local machine
-kubectl get secret bundle-truststore -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > $SCRIPT_DIR/truststore.jks
+# Extract truststore and external Kafka client keystore for local CLI examples (README).
+# Reuse console-trust for the external client — it covers conduktor-ca (for the
+# Gateway server cert) and ext-services-ca (for the OIDC token-fetch HTTPS call).
+waitSecretCreated conduktor external-kafka-client-crt-secret
+kubectl get secret console-trust -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > $SCRIPT_DIR/truststore.jks
+kubectl get secret external-kafka-client-crt-secret -n conduktor -o jsonpath='{.data.keystore\.jks}' | base64 --decode > $SCRIPT_DIR/keystore.jks

@@ -25,6 +25,9 @@ spec:
     kind: ClusterIssuer
     group: cert-manager.io
 ---
+# Catch-all issuer used by nginx ingress TLS (cert-manager.io/cluster-issuer
+# annotation on the Console / Gateway ingresses). Kept as a fallback so the
+# ingress certs do not depend on the per-service CA structure below.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -32,6 +35,118 @@ metadata:
 spec:
   ca:
     secretName: root-ca-secret
+---
+#### Per-service CAs
+# Each external service brings its own CA. trust-manager Bundles below
+# compose subsets of these into purpose-specific truststores. In real prod
+# these CAs would be supplied by the upstream service operator (Confluent
+# Cloud CA, your IDP's CA, your DB provider's CA, ...), here we self-sign
+# them all via the bootstrap selfsigned-issuer.
+#
+#   kafka-stack-ca  : signs kafka brokers + schema-registry
+#   ext-services-ca : signs keycloak, PG (main + sql), s3-minio (and Vault later)
+#   conduktor-ca    : signs Console server, Gateway listener, Console client cert
+#   ext-client-ca   : signs external Kafka client certs (README example)
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: kafka-stack-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: kafka-stack-ca
+  secretName: kafka-stack-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: kafka-stack-issuer
+spec:
+  ca:
+    secretName: kafka-stack-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ext-services-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: ext-services-ca
+  secretName: ext-services-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ext-services-issuer
+spec:
+  ca:
+    secretName: ext-services-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: conduktor-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: conduktor-ca
+  secretName: conduktor-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: conduktor-issuer
+spec:
+  ca:
+    secretName: conduktor-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ext-client-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: ext-client-ca
+  secretName: ext-client-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ext-client-issuer
+spec:
+  ca:
+    secretName: ext-client-ca-secret
 ---
 #### Components certificates
 apiVersion: cert-manager.io/v1
@@ -50,7 +165,7 @@ spec:
     - "main-postgresql.cdk-deps.svc.cluster.local"
     - "*.main-postgresql-hl.cdk-deps.svc.cluster.local"
   issuerRef:
-    name: local-ca-issuer
+    name: ext-services-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -74,7 +189,7 @@ spec:
     - "sql-postgresql.cdk-deps.svc.cluster.local"
     - "*.sql-postgresql-hl.cdk-deps.svc.cluster.local"
   issuerRef:
-    name: local-ca-issuer
+    name: ext-services-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -97,7 +212,7 @@ spec:
   dnsNames:
     - s3-minio.cdk-deps.svc.cluster.local
   issuerRef:
-    name: local-ca-issuer
+    name: ext-services-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -130,7 +245,7 @@ spec:
     - oidc.localhost
     - keycloak.cdk-deps.svc.cluster.local
   issuerRef:
-    name: local-ca-issuer
+    name: ext-services-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -169,7 +284,7 @@ spec:
     - console.conduktor.localhost
     - conduktor-console.conduktor.svc.cluster.local
   issuerRef:
-    name: local-ca-issuer
+    name: conduktor-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -183,6 +298,42 @@ spec:
         name: conduktor-console-jks-password-secret
         key: password
 ---
+# Client certificate used by Conduktor Console to authenticate to Gateway
+# listeners that require mTLS (sslClientAuth: REQUIRE). Same CA as Gateway,
+# so Gateway's cert-manager-managed truststore trusts it automatically.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: console-client-crt
+  namespace: conduktor
+spec:
+  isCA: false
+  secretName: console-client-crt-secret
+  # Cert subject is only used for chain validation; the SASL_PLAIN username
+  # (e.g. console-sa) is what Gateway uses as the auth principal.
+  subject:
+    organizations:
+      - conduktor
+  commonName: conduktor-console
+  dnsNames:
+    - conduktor-console.conduktor.svc.cluster.local
+  issuerRef:
+    name: conduktor-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: conduktor-console-jks-password-secret
+        key: password
+---
+# Password secret reused as tls.keystore.passwordSecretRef in gateway-values.yaml
+# so the chart-generated keystore uses a known password instead of an auto one.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -192,27 +343,29 @@ type: Opaque
 stringData:
   password: "conduktor"
 ---
+# External Kafka client cert for the README example (mTLS to Gateway external
+# listener which has sslClientAuth: REQUIRE). Signed by local-ca-issuer so
+# Gateway's cert-manager-managed truststore trusts it automatically.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: gateway-tls
+  name: external-kafka-client-crt
   namespace: conduktor
 spec:
   isCA: false
-  secretName: gateway-tls-secret
+  secretName: external-kafka-client-crt-secret
   subject:
     organizations:
       - conduktor
-  commonName: gateway.conduktor.localhost
+  commonName: external-kafka-client
   dnsNames:
-    - gateway.conduktor.localhost # External Bootstrap Server
-    - "*.gateway.conduktor.localhost" # External Brokers wildcard for SNI brokers pattern broker{{nodeId}}.gateway.conduktor.localhost
-    - conduktor-gateway-internal.conduktor.svc.cluster.local # Internal Bootstrap Server
-    - conduktor-gateway-broker-0.conduktor.svc.cluster.local # Internal Brokers explicit 
-    - conduktor-gateway-broker-1.conduktor.svc.cluster.local
-    - conduktor-gateway-broker-2.conduktor.svc.cluster.local
+    - external-kafka-client
+  usages:
+    - client auth
+    - digital signature
+    - key encipherment
   issuerRef:
-    name: local-ca-issuer
+    name: ext-client-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -225,4 +378,106 @@ spec:
       passwordSecretRef:
         name: conduktor-gateway-jks-password-secret
         key: password
+---
+#### trust-manager Bundles
+# Each Bundle composes a purpose-specific JKS truststore from a subset of the
+# per-service CAs above. trust-manager distributes the resulting Secret to
+# every namespace labeled trust-bundle: enabled.
+#
+#   kafka-stack-trust     : kafka + SR — mounted by SR (kafkastore) and Gateway (backend kafka)
+#   gateway-clients-trust : conduktor + ext-client CAs — Gateway listener mTLS truststore
+#   ext-services-trust    : ext-services CA — Gateway HTTPS calls (OIDC) and JVM-default
+#   console-trust         : everything Console needs (PG/OIDC/S3/SR/Gateway)
+#
+# In real prod each "source" would point at an upstream-supplied CA Secret.
+# inLine: PEM payloads are supported too (see trust-manager Bundle docs).
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: kafka-stack-trust
+spec:
+  sources:
+    - secret:
+        name: kafka-stack-ca-secret
+        key: ca.crt
+  target:
+    secret:
+      key: ca-bundle.pem
+    additionalFormats:
+      jks:
+        key: truststore.jks
+        password: "conduktor"
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: gateway-clients-trust
+spec:
+  sources:
+    - secret:
+        name: conduktor-ca-secret
+        key: ca.crt
+    - secret:
+        name: ext-client-ca-secret
+        key: ca.crt
+  target:
+    secret:
+      key: ca-bundle.pem
+    additionalFormats:
+      jks:
+        key: truststore.jks
+        password: "conduktor"
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: ext-services-trust
+spec:
+  sources:
+    - secret:
+        name: ext-services-ca-secret
+        key: ca.crt
+  target:
+    secret:
+      key: ca-bundle.pem
+    additionalFormats:
+      jks:
+        key: truststore.jks
+        password: "conduktor"
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: console-trust
+spec:
+  sources:
+    - secret:
+        name: kafka-stack-ca-secret
+        key: ca.crt
+    - secret:
+        name: ext-services-ca-secret
+        key: ca.crt
+    - secret:
+        name: conduktor-ca-secret
+        key: ca.crt
+  target:
+    secret:
+      key: ca-bundle.pem
+    additionalFormats:
+      jks:
+        key: truststore.jks
+        password: "conduktor"
+    namespaceSelector:
+      matchLabels:
+        trust-bundle: enabled
 ---

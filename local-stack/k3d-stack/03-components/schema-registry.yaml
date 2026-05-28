@@ -26,7 +26,7 @@ spec:
   dnsNames:
     - schemaregistry.cdk-deps.svc.cluster.local
   issuerRef:
-    name: local-ca-issuer
+    name: kafka-stack-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   privateKey:
@@ -82,7 +82,7 @@ spec:
             - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM
               value: "PLAIN"
             - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION
-              value: "/etc/schema-registry/secrets/kafka-tls/kafka.truststore.jks"
+              value: "/etc/schema-registry/secrets/kafka-tls/truststore.jks"
             - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG
               value: "org.apache.kafka.common.security.plain.PlainLoginModule required username='kafka-admin' password='kafka-admin-password';"
             - name: SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD
@@ -123,7 +123,7 @@ spec:
             secretName: sr-crt-secret
         - name: kafka-certs
           secret:
-            secretName: sr-kafka-bundle-truststore
+            secretName: kafka-stack-trust
 ---
 apiVersion: v1
 kind: Service
