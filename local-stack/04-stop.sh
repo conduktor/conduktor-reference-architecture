@@ -11,4 +11,7 @@ checkKubeContext
 echo "Deleting k3d cluster"
 k3d cluster delete --config ${SCRIPT_DIR}/k3d-stack/k3d-config.yaml || true
 
+echo "Cleaning up Terraform state"
 rm -rf ${TERRAFORM_DIR}/.terraform ${TERRAFORM_DIR}/.terraform.lock.hcl ${TERRAFORM_DIR}/terraform.tfstate*
+echo "Cleaning up generated TLS artifacts"
+rm ${STACK_DIR}/truststore.jks ${STACK_DIR}/keystore.jks || true
