@@ -31,8 +31,13 @@ variable "gateway_admin_password" {
   sensitive   = true
 }
 
-variable "bootstrap_servers" {
+variable "gateway_bootstrap_servers" {
   description = "Gateway bootstrap servers"
+  type        = string
+}
+
+variable "gateway_api_url" {
+  description = "Gateway API URL"
   type        = string
 }
 

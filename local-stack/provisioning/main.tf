@@ -51,7 +51,7 @@ module "clusters" {
       displayName = "Gateway Cluster"
       description = "Conduktor Gateway Cluster"
       kafka = {
-        bootstrapServers    = var.bootstrap_servers
+        bootstrapServers    = var.gateway_bootstrap_servers
         saslUsername        = module.gw-service-accounts.service_accounts["console-sa"].username
         saslPassword        = module.gw-service-accounts.service_accounts["console-sa"].token
         securityProtocol    = "SASL_SSL"
@@ -65,7 +65,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = var.gateway_api_url
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
@@ -75,7 +75,7 @@ module "clusters" {
       displayName = "Gateway Client Cluster"
       description = "Conduktor Gateway Cluster using client-sa service account"
       kafka = {
-        bootstrapServers    = var.bootstrap_servers
+        bootstrapServers    = var.gateway_bootstrap_servers
         saslUsername        = module.gw-service-accounts.service_accounts["client-sa"].username
         saslPassword        = module.gw-service-accounts.service_accounts["client-sa"].token
         securityProtocol    = "SASL_SSL"
@@ -89,7 +89,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = var.gateway_api_url
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
