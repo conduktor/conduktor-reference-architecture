@@ -281,7 +281,8 @@ data:
             "backchannel.logout.session.required": "true",
             "oauth2.device.authorization.grant.enabled": "false",
             "display.on.consent.screen": "false",
-            "backchannel.logout.revoke.offline.tokens": "false"
+            "backchannel.logout.revoke.offline.tokens": "false",
+            "post.logout.redirect.uris": "https://console.conduktor.localhost/##https://console.conduktor.localhost"
           },
           "authenticationFlowBindingOverrides": {},
           "fullScopeAllowed": true,
@@ -325,6 +326,38 @@ data:
                 "access.token.claim": "true",
                 "included.custom.audience": "account",
                 "userinfo.token.claim": "false"
+              }
+            },
+            {
+              "id": "f6da7d8b-7b8a-4c92-9d63-9b6f5f86e1a1",
+              "name": "email",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-usermodel-property-mapper",
+              "consentRequired": false,
+              "config": {
+                "introspection.token.claim": "true",
+                "userinfo.token.claim": "true",
+                "user.attribute": "email",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "email",
+                "jsonType.label": "String"
+              }
+            },
+            {
+              "id": "c9e0a3c2-4d2a-4d36-9a39-9c8a2c0f6c4b",
+              "name": "email verified",
+              "protocol": "openid-connect",
+              "protocolMapper": "oidc-usermodel-property-mapper",
+              "consentRequired": false,
+              "config": {
+                "introspection.token.claim": "true",
+                "userinfo.token.claim": "true",
+                "user.attribute": "emailVerified",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "claim.name": "email_verified",
+                "jsonType.label": "boolean"
               }
             }
           ]
