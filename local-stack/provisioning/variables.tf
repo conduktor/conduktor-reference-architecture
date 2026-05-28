@@ -74,3 +74,14 @@ variable "kafka_password" {
   type        = string
   sensitive   = true
 }
+
+variable "console_kafka_keystore_location" {
+  description = "Path (inside Console pod) of the JKS keystore used as client cert for mTLS to Gateway listeners"
+  type        = string
+}
+
+variable "console_kafka_keystore_password" {
+  description = "Password of the Console Kafka client keystore"
+  type        = string
+  sensitive   = true
+}

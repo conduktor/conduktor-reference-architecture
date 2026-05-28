@@ -14,11 +14,19 @@ resource "conduktor_console_kafka_cluster_v2" "clusters" {
     display_name      = each.value.displayName
     description       = each.value.description
     bootstrap_servers = each.value.kafka.bootstrapServers
-    properties = {
-      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='${each.value.kafka.saslUsername}' password='${each.value.kafka.saslPassword}';"
-      "security.protocol" = each.value.kafka.securityProtocol
-      "sasl.mechanism"    = each.value.kafka.saslMechanism
-    }
+    properties = merge(
+      {
+        "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='${each.value.kafka.saslUsername}' password='${each.value.kafka.saslPassword}';"
+        "security.protocol" = each.value.kafka.securityProtocol
+        "sasl.mechanism"    = each.value.kafka.saslMechanism
+      },
+      each.value.kafka.sslKeystoreLocation != null ? {
+        "ssl.keystore.location" = each.value.kafka.sslKeystoreLocation
+        "ssl.keystore.password" = each.value.kafka.sslKeystorePassword
+        "ssl.key.password"      = each.value.kafka.sslKeystorePassword
+        "ssl.keystore.type"     = "JKS"
+      } : {}
+    )
 
     schema_registry = each.value.schemaRegistry != null ? {
       confluent_like = {

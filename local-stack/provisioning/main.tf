@@ -51,11 +51,13 @@ module "clusters" {
       displayName = "Gateway Cluster"
       description = "Conduktor Gateway Cluster"
       kafka = {
-        bootstrapServers = var.bootstrap_servers
-        saslUsername     = module.gw-service-accounts.service_accounts["console-sa"].username
-        saslPassword     = module.gw-service-accounts.service_accounts["console-sa"].token
-        securityProtocol = "SASL_SSL"
-        saslMechanism    = "PLAIN"
+        bootstrapServers    = var.bootstrap_servers
+        saslUsername        = module.gw-service-accounts.service_accounts["console-sa"].username
+        saslPassword        = module.gw-service-accounts.service_accounts["console-sa"].token
+        securityProtocol    = "SASL_SSL"
+        saslMechanism       = "PLAIN"
+        sslKeystoreLocation = var.console_kafka_keystore_location
+        sslKeystorePassword = var.console_kafka_keystore_password
       }
       schemaRegistry = {
         url      = var.schema_registry_url
@@ -73,11 +75,13 @@ module "clusters" {
       displayName = "Gateway Client Cluster"
       description = "Conduktor Gateway Cluster using client-sa service account"
       kafka = {
-        bootstrapServers = var.bootstrap_servers
-        saslUsername     = module.gw-service-accounts.service_accounts["client-sa"].username
-        saslPassword     = module.gw-service-accounts.service_accounts["client-sa"].token
-        securityProtocol = "SASL_SSL"
-        saslMechanism    = "PLAIN"
+        bootstrapServers    = var.bootstrap_servers
+        saslUsername        = module.gw-service-accounts.service_accounts["client-sa"].username
+        saslPassword        = module.gw-service-accounts.service_accounts["client-sa"].token
+        securityProtocol    = "SASL_SSL"
+        saslMechanism       = "PLAIN"
+        sslKeystoreLocation = var.console_kafka_keystore_location
+        sslKeystorePassword = var.console_kafka_keystore_password
       }
       schemaRegistry = {
         url      = var.schema_registry_url

@@ -11,6 +11,10 @@ variable "clusters" {
         saslMechanism    = string
         saslUsername     = string
         saslPassword     = string
+        # Optional client keystore for mTLS to Kafka listeners that
+        # require client auth (e.g. Gateway sslClientAuth: REQUIRE).
+        sslKeystoreLocation = optional(string)
+        sslKeystorePassword = optional(string)
       })
       schemaRegistry = optional(object({
         url      = string
