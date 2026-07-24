@@ -143,59 +143,11 @@ generate_schema_registry_jks_truststore() {
   rm -rf "${temp_dir:?Missing temp dir}"
 }
 
-generate_jks_truststore() {
-  local jks_password="conduktor"
-
-  # Temporary directory to store the certificates and JKS file
-  temp_dir=$(mktemp -d)
-  echo "Temporary directory created at $temp_dir"
-
-  echo "Retrieving certificates..."
-  # Retrieve the CA
-  waitSecretCreated cert-manager root-ca-secret
-  kubectl get secret root-ca-secret -n cert-manager -o jsonpath="{.data['ca\.crt']}" | base64 --decode > "$temp_dir/root.ca.crt"
-
-  # Retrieve Postgresql TLS secret
-  waitSecretCreated cdk-deps pg-main-crt-secret
-  waitSecretCreated cdk-deps pg-sql-crt-secret
-  kubectl get secret pg-main-crt-secret -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/main-postgresql.tls.crt"
-  kubectl get secret pg-sql-crt-secret  -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/sql-postgresql.tls.crt"
-
-  # Retrieve the Kafka TLS secret
-  waitSecretCreated cdk-deps kafka-tls
-  kubectl get secret kafka-tls -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/kafka.tls.crt"
-
-  # Retrieve the Schema Registry TLS secret
-  waitSecretCreated cdk-deps sr-crt-secret
-  kubectl get secret sr-crt-secret -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/sr.tls.crt"
-
-  # Retrieve the S3 TLS secret
-  waitSecretCreated cdk-deps s3-crt-secret
-  kubectl get secret s3-crt-secret -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/s3.tls.crt"
-
-  # Retrieve the OIDC TLS secret
-  kubectl get secret keycloak-crt-secret -n cdk-deps -o jsonpath="{.data['tls\.crt']}" | base64 --decode > "$temp_dir/oidc.tls.crt"
-
-  echo "Certificates retrieved successfully."
-  ls -al "$temp_dir"
-  echo "Creating JKS truststore..."
-  # Generate the JKS truststore
-  for cert in "$temp_dir"/*.crt; do
-    keytool -importcert -noprompt \
-      -alias "$(basename "$cert" .crt)" \
-      -file "$cert" \
-      -keystore "$temp_dir/truststore.jks" \
-      -storepass "$jks_password" -noprompt
-  done
-
-  kubectl delete secret bundle-truststore -n conduktor --ignore-not-found
-  kubectl create secret generic bundle-truststore \
-    --from-file=truststore.jks="$temp_dir/truststore.jks" \
-    -n conduktor
-
-  # Clean up
-  rm -rf "${temp_dir:?Missing temp dir}"
-}
+# NOTE: generate_jks_truststore() used to build the "bundle-truststore" secret here by pinning the
+# root CA plus each component's leaf certificate. It has been replaced by the trust-manager Bundle in
+# k3d-stack/02-infra-crds.yaml, which distributes the root CA alone. Every endpoint in the stack is
+# issued by local-ca-issuer and presents its full chain, so the root is sufficient - and unlike the
+# pinned leaves, it does not go stale when certificates are renewed.
 
 # Allows to call a function based on arguments passed to the script
 $*

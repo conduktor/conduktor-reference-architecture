@@ -33,6 +33,28 @@ spec:
   ca:
     secretName: root-ca-secret
 ---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: bundle-truststore
+spec:
+  sources:
+    - secret:
+        name: root-ca-secret
+        key: ca.crt
+  target:
+    secret:
+      key: ca-bundle.pem
+    additionalFormats:
+      jks:
+        key: truststore.jks
+        # Must match the password expected by consumers: CDK_SSL_TRUSTSTORE_* in console-values.yaml
+        # and ssl.truststore.password in client.properties.
+        password: conduktor
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: conduktor
+---
 #### Components certificates
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -183,6 +205,13 @@ spec:
         name: conduktor-console-jks-password-secret
         key: password
 ---
+# Password cert-manager uses to encrypt the Gateway's generated JKS keystore/truststore.
+# Pinned to a known value so gateway-secrets.yaml's JAVA_TOOL_OPTIONS can reference it.
+# Consumed via tls.keystore.passwordSecretRef in gateway-values.yaml.
+#
+# NOTE: the Gateway Certificate itself is no longer declared here - the gateway chart creates it
+# (as "conduktor-gateway-tls") when tls.certManager.enabled is set, deriving its SANs from the
+# listener configuration. Only this password secret needs to exist beforehand.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -191,38 +220,4 @@ metadata:
 type: Opaque
 stringData:
   password: "conduktor"
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: gateway-tls
-  namespace: conduktor
-spec:
-  isCA: false
-  secretName: gateway-tls-secret
-  subject:
-    organizations:
-      - conduktor
-  commonName: gateway.conduktor.localhost
-  dnsNames:
-    - gateway.conduktor.localhost
-    - "*.gateway.conduktor.localhost"
-    - conduktor-gateway-internal.conduktor.svc.cluster.local
-    - "*.conduktor-gateway-internal.conduktor.svc.cluster.local"
-    - conduktor-gateway-external.conduktor.svc.cluster.local
-    - "*.conduktor-gateway-external.conduktor.svc.cluster.local"
-  issuerRef:
-    name: local-ca-issuer
-    kind: ClusterIssuer
-    group: cert-manager.io
-  privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
-  keystores:
-    jks:
-      create: true
-      passwordSecretRef:
-        name: conduktor-gateway-jks-password-secret
-        key: password
 ---

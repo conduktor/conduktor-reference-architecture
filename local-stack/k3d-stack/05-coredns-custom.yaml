@@ -5,8 +5,11 @@ metadata:
   namespace: kube-system
 data:
   rewrite.override: |
-    # Add rewrite rules for Conduktor Gateway SNI routing on subdomain per broker instance that redirect to the external service
-    rewrite name regex .*gateway\.conduktor\.localhost conduktor-gateway-external.conduktor.svc.cluster.local answer auto
-    
+    # NOTE: a rewrite for *.gateway.conduktor.localhost used to live here so that in-cluster clients
+    # (Console) could reach the Gateway through its external SNI listener. It is no longer needed:
+    # the Gateway now exposes a dedicated internal listener with port-based routing, so Console talks
+    # to conduktor-gateway-internal.conduktor.svc.cluster.local directly by its real service name.
+    # gateway.conduktor.localhost is now only resolved on the host, via /etc/hosts (see README).
+
     # Add rewrite rule to allow Keycloak OIDC ingress to be resolved by the internal DNS for Console
     rewrite name regex oidc\.localhost keycloak.cdk-deps.svc.cluster.local answer auto

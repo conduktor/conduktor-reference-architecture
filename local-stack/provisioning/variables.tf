@@ -15,8 +15,13 @@ variable "console_admin_password" {
   sensitive   = true
 }
 
-variable "gateway_base_url" {
-  description = "Base URL for the Conduktor Gateway"
+variable "gateway_external_base_url" {
+  description = "Base URL for the Conduktor Gateway admin API as reached from outside the cluster (through the ingress). Used by the Gateway terraform provider, which runs on the host."
+  type        = string
+}
+
+variable "gateway_internal_base_url" {
+  description = "Base URL for the Conduktor Gateway admin API as reached from inside the cluster. Stored in Console's cluster configuration, so it is resolved by Console, not by terraform."
   type        = string
 }
 

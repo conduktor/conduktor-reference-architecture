@@ -61,8 +61,9 @@ echo "05 - Update KubeDNS config for Gateway SNI routing"
 kubectl apply -f ${STACK_DIR}/05-coredns-custom.yaml
 kubectl -n kube-system delete pod -l k8s-app=kube-dns
 
-# Extract and package all certificates into a JKS truststore for Conduktor Gateway and Conduktor Console
-generate_jks_truststore
+# The bundle-truststore secret is generated declaratively by the trust-manager Bundle defined in
+# k3d-stack/02-infra-crds.yaml, so there is nothing to build here - just wait for it to be synced.
+waitSecretCreated conduktor bundle-truststore
 
-# Download the truststore to the local machine
+# Download the truststore to the local machine (used by client.properties)
 kubectl get secret bundle-truststore -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > $SCRIPT_DIR/truststore.jks

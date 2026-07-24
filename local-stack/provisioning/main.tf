@@ -3,8 +3,8 @@ resource "conduktor_console_group_v2" "admin" {
   provider = conduktor.console
   name     = "admin"
   spec = {
-    display_name = "admin"
-    description  = "Built-in group with admin level access"
+    display_name    = "admin"
+    description     = "Built-in group with admin level access"
     external_groups = ["conduktor-admin"]
     # Adding external group for admin access for SSO admin user with external group mapping
     members : [var.console_admin_user]
@@ -19,7 +19,7 @@ module "iam" {
   source = "./modules/01-iam"
 
   # input variables
-  users = yamldecode(file("./data/users.yaml"))
+  users  = yamldecode(file("./data/users.yaml"))
   groups = yamldecode(file("./data/groups.yaml"))
 
   # provider configuration
@@ -32,7 +32,7 @@ module "gw-service-accounts" {
   source = "./modules/02-gw-service-accounts"
 
   # input variables
-  service_account_names = ["console-sa", "client-sa"]
+  service_account_names  = ["console-sa", "client-sa"]
   token_lifetime_seconds = var.gateway_token_lifetime_seconds
 
   # provider configuration
@@ -63,7 +63,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = var.gateway_internal_base_url
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
@@ -85,7 +85,7 @@ module "clusters" {
         password = var.schema_registry_password
       }
       gateway = {
-        baseUrl       = "${var.gateway_base_url}:8888"
+        baseUrl       = var.gateway_internal_base_url
         adminUser     = var.gateway_admin_user
         adminPassword = var.gateway_admin_password
       }
@@ -184,9 +184,9 @@ module "self-service-central" {
 # Self-Service Teams for Website Analytics and E-commerce
 ###
 locals {
-  web_analytics_team = module.iam.group_list["website-analytics-team"]
-  web_analytics_applications = { for app in module.self-service-central.applications: app.name => app if app.spec.owner == local.web_analytics_team.name }
-  web_analytics_applications_instances = { for inst in module.self-service-central.applications_instances: inst.name => inst if contains(keys(local.web_analytics_applications), inst.application ) }
+  web_analytics_team                   = module.iam.group_list["website-analytics-team"]
+  web_analytics_applications           = { for app in module.self-service-central.applications : app.name => app if app.spec.owner == local.web_analytics_team.name }
+  web_analytics_applications_instances = { for inst in module.self-service-central.applications_instances : inst.name => inst if contains(keys(local.web_analytics_applications), inst.application) }
 }
 
 module "self-service-team-website-analytics" {
@@ -196,7 +196,7 @@ module "self-service-team-website-analytics" {
   owner                 = local.web_analytics_team.name
   applications          = local.web_analytics_applications
   application_instances = local.web_analytics_applications_instances
-  permissions = []
+  permissions           = []
   groups = [
     {
       name                 = "website-analytics-dev-support"
@@ -204,7 +204,7 @@ module "self-service-team-website-analytics" {
       description          = "Group for Support Team on Website Analytics Dev instance"
       application          = local.web_analytics_applications["website-analytics"].name
       application_instance = local.web_analytics_applications_instances["website-analytics-dev"].name
-      members = [module.iam.users_list["alice@company.io"].name]
+      members              = [module.iam.users_list["alice@company.io"].name]
     }
   ]
 
@@ -250,9 +250,9 @@ module "self-service-team-website-analytics" {
 }
 
 locals {
-  ecommerce_team = module.iam.group_list["ecommerce-team"]
-  ecommerce_applications = { for app in module.self-service-central.applications: app.name => app if app.spec.owner == local.ecommerce_team.name }
-  ecommerce_applications_instances = { for inst in module.self-service-central.applications_instances: inst.name => inst if contains(keys(local.ecommerce_applications), inst.application ) }
+  ecommerce_team                   = module.iam.group_list["ecommerce-team"]
+  ecommerce_applications           = { for app in module.self-service-central.applications : app.name => app if app.spec.owner == local.ecommerce_team.name }
+  ecommerce_applications_instances = { for inst in module.self-service-central.applications_instances : inst.name => inst if contains(keys(local.ecommerce_applications), inst.application) }
 }
 
 module "self-service-team-ecommerce" {
@@ -283,7 +283,7 @@ module "self-service-team-ecommerce" {
       description          = "Group for Support Team on E-commerce Event dev instance"
       application          = local.ecommerce_applications["ecommerce-sales"].name
       application_instance = local.ecommerce_applications_instances["ecommerce-event-dev"].name
-      members = [module.iam.users_list["alice@company.io"].name]
+      members              = [module.iam.users_list["alice@company.io"].name]
     }
   ]
 

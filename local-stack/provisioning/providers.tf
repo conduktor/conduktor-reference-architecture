@@ -19,7 +19,7 @@ provider "conduktor" {
 provider "conduktor" {
   alias          = "gateway"
   mode           = "gateway"
-  base_url       = var.gateway_base_url
+  base_url       = var.gateway_external_base_url
   admin_user     = var.gateway_admin_user
   admin_password = var.gateway_admin_password
   insecure       = true
