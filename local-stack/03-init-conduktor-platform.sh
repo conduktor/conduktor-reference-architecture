@@ -2,6 +2,9 @@
 
 set -E
 
+# Unset any existing API keys
+unset CDK_API_KEY
+
 SCRIPT_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TERRAFORM_DIR=${SCRIPT_DIR}/provisioning
 

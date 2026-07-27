@@ -152,7 +152,6 @@ platformCortex:
     privileged: false
     runAsUser: 10001
     runAsGroup: 0
-    fsGroup: 0
 
 
 # TODO enable TLS on S3 endpoint
