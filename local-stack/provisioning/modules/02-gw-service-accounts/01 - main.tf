@@ -3,18 +3,17 @@ locals {
   vcluster = "passthrough"
 }
 
+# EXTERNAL service accounts: the credential lives outside Gateway — a client
+# certificate on the internal listener, an OIDC token on the external one.
+# Gateway resolves the authenticated principal against `external_names` and
+# maps it to this service account, which is what ACLs and GATEWAY_SUPER_USERS
+# refer to.
 resource "conduktor_gateway_service_account_v2" "sa" {
-  for_each = var.service_account_names
-  name     = each.value
+  for_each = var.service_accounts
+  name     = each.key
   vcluster = local.vcluster
   spec = {
-    type = "LOCAL"
+    type           = "EXTERNAL"
+    external_names = each.value
   }
-}
-
-resource "conduktor_gateway_token_v2" "sa_token" {
-  for_each = conduktor_gateway_service_account_v2.sa
-  vcluster         = each.value.vcluster
-  username         = each.value.name
-  lifetime_seconds = var.token_lifetime_seconds
 }

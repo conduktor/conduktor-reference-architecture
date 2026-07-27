@@ -8,11 +8,13 @@ variable "clusters" {
       kafka       = object({
         bootstrapServers = string
         securityProtocol = string
-        saslMechanism    = string
-        saslUsername     = string
-        saslPassword     = string
-        # Optional client keystore for mTLS to Kafka listeners that
-        # require client auth (e.g. Gateway sslClientAuth: REQUIRE).
+        # SASL credentials. Omit on listeners that authenticate with mTLS only
+        # (e.g. the Gateway internal listener).
+        saslMechanism    = optional(string)
+        saslUsername     = optional(string)
+        saslPassword     = optional(string)
+        # Client keystore for listeners that require client auth
+        # (sslClientAuth: REQUIRE). Omit when the listener uses one-way TLS.
         sslKeystoreLocation = optional(string)
         sslKeystorePassword = optional(string)
       })

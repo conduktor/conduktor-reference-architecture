@@ -103,7 +103,17 @@ You can then login using the following credentials :
 
 You will be able to create topics and otherwise interact with both Kafka Cluster and Conduktor Gateway.
 
-The connection to Conduktor Gateway uses SASL PLAIN with a credential generated earlier in the previous step.
+Each Gateway listener uses a single authentication method — customers rarely want clients to juggle both a
+certificate and a SASL credential on the same endpoint:
+
+| Listener | Port | Authentication | Clients |
+|---|---|---|---|
+| `internal` | 9093 | mTLS (`SSL`, `sslClientAuth: REQUIRE`) | Conduktor Console |
+| `external` | 9092 | SASL/OAUTHBEARER over one-way TLS | Kafka clients outside the cluster |
+
+Console connects on the internal listener with a client certificate issued by cert-manager. Gateway derives the
+principal from the certificate CN (`GATEWAY_SSL_PRINCIPAL_MAPPING_RULES`), so the `console-sa` and `client-sa`
+certificates map to the EXTERNAL Gateway service accounts of the same name.
 
 ### Conduktor Gateway
 
@@ -121,8 +131,6 @@ You can reach Kafka through Gateway using SASL OAuthbearer (see client.propertie
 export KAFKA_OPTS="-Djava.security.manager=allow \
 -Djavax.net.ssl.trustStore=./truststore.jks \
 -Djavax.net.ssl.trustStorePassword=conduktor \
--Djavax.net.ssl.keyStore=./keystore.jks \
--Djavax.net.ssl.keyStorePassword=conduktor \
 -Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://oidc.localhost/realms/conduktor-realm/protocol/openid-connect/token"
 ```
 
@@ -138,7 +146,6 @@ Alternatively, to run a Kafka client on an older version, you can use this docke
 docker run --rm --network host \
   -e KAFKA_OPTS="-Djavax.net.ssl.trustStore=/tmp/truststore.jks -Djavax.net.ssl.trustStorePassword=conduktor" \
   -v $PWD/truststore.jks:/tmp/truststore.jks \
-  -v $PWD/keystore.jks:/tmp/keystore.jks \
   -v $PWD/client_pre_ak4.properties:/tmp/client.properties \
   apache/kafka:3.8.0 /opt/kafka/bin/kafka-topics.sh \
     --bootstrap-server gateway.conduktor.localhost:9092 \
@@ -146,9 +153,14 @@ docker run --rm --network host \
     --list
 ```
 
-> The Gateway external listener is configured with `sslClientAuth: REQUIRE`,
-> so a client `keystore.jks` is required alongside the `truststore.jks`.
-> Both files are exported to this directory by `make start-local-stack`.
+> `client_pre_ak4.properties` differs only in how the OAuth credentials are
+> passed. Clients on Kafka 4.1 or later read them from
+> `sasl.oauthbearer.client.credentials.client.id` / `.client.secret`; older
+> clients only understand them inside `sasl.jaas.config`.
+
+> The external listener uses one-way TLS (`sslClientAuth: NONE`), so clients
+> only need `truststore.jks`, exported to this directory by
+> `make start-local-stack`.
 
 ### Identity Provider
 

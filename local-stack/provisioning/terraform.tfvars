@@ -12,8 +12,6 @@ gateway_admin_password = "adminP4ss!"
 gateway_bootstrap_servers = "conduktor-gateway-internal.conduktor.svc.cluster.local:9093"
 gateway_api_url = "https://conduktor-gateway-internal.conduktor.svc.cluster.local:8888"
 
-gateway_token_lifetime_seconds = 2630000  # 1 month
-
 schema_registry_url      = "https://schemaregistry.cdk-deps.svc.cluster.local:8081"
 schema_registry_user     = "sc-user"
 schema_registry_password = "sr-password"
@@ -25,6 +23,9 @@ gateway_truststore_password = "conduktor"
 
 kafka_password = "kafka-admin-password"
 
-# Path mounted by console-values.yaml extraVolumes (cert-manager console-client-crt-secret)
-console_kafka_keystore_location = "/opt/conduktor/ssl/client/keystore.jks"
+# Paths mounted by console-values.yaml extraVolumes (cert-manager
+# console-sa-client-crt-secret / client-sa-client-crt-secret). The certificate
+# CN is the principal Gateway authenticates on the mTLS internal listener.
+console_sa_keystore_location    = "/opt/conduktor/ssl/client/console-sa/keystore.jks"
+client_sa_keystore_location     = "/opt/conduktor/ssl/client/client-sa/keystore.jks"
 console_kafka_keystore_password = "conduktor"

@@ -32,8 +32,17 @@ module "gw-service-accounts" {
   source = "./modules/02-gw-service-accounts"
 
   # input variables
-  service_account_names = ["console-sa", "client-sa"]
-  token_lifetime_seconds = var.gateway_token_lifetime_seconds
+  # Both listeners authenticate against an outside authority — cert-manager or
+  # Keycloak — so every identity below is an EXTERNAL service account.
+  service_accounts = {
+    # Internal listener (mTLS): external name is the client certificate CN.
+    # Certificates are issued by cert-manager, see k3d-stack/02-infra-crds.yaml.
+    "console-sa" = ["console-sa"]
+    "client-sa"  = ["client-sa"]
+    # External listener (SASL/OAUTHBEARER): external name is the value of the
+    # claim named by GATEWAY_OAUTH_SUB_CLAIM_NAME (azp = the Keycloak client id).
+    "app-1" = ["app-1"]
+  }
 
   # provider configuration
   providers = {
@@ -50,13 +59,12 @@ module "clusters" {
       name        = "gateway-cluster"
       displayName = "Gateway Cluster"
       description = "Conduktor Gateway Cluster"
+      # Gateway internal listener is mTLS only: the client certificate is the
+      # credential, and its CN (console-sa) is the authenticated principal.
       kafka = {
         bootstrapServers    = var.gateway_bootstrap_servers
-        saslUsername        = module.gw-service-accounts.service_accounts["console-sa"].username
-        saslPassword        = module.gw-service-accounts.service_accounts["console-sa"].token
-        securityProtocol    = "SASL_SSL"
-        saslMechanism       = "PLAIN"
-        sslKeystoreLocation = var.console_kafka_keystore_location
+        securityProtocol    = "SSL"
+        sslKeystoreLocation = var.console_sa_keystore_location
         sslKeystorePassword = var.console_kafka_keystore_password
       }
       schemaRegistry = {
@@ -76,11 +84,8 @@ module "clusters" {
       description = "Conduktor Gateway Cluster using client-sa service account"
       kafka = {
         bootstrapServers    = var.gateway_bootstrap_servers
-        saslUsername        = module.gw-service-accounts.service_accounts["client-sa"].username
-        saslPassword        = module.gw-service-accounts.service_accounts["client-sa"].token
-        securityProtocol    = "SASL_SSL"
-        saslMechanism       = "PLAIN"
-        sslKeystoreLocation = var.console_kafka_keystore_location
+        securityProtocol    = "SSL"
+        sslKeystoreLocation = var.client_sa_keystore_location
         sslKeystorePassword = var.console_kafka_keystore_password
       }
       schemaRegistry = {

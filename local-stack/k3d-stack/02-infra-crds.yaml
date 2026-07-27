@@ -45,8 +45,7 @@ spec:
 #
 #   kafka-stack-ca  : signs kafka brokers + schema-registry
 #   ext-services-ca : signs keycloak, PG (main + sql), s3-minio (and Vault later)
-#   conduktor-ca    : signs Console server, Gateway listener, Console client cert
-#   ext-client-ca   : signs external Kafka client certs (README example)
+#   conduktor-ca    : signs Console server, Gateway listener, Console client certs
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -122,31 +121,6 @@ metadata:
 spec:
   ca:
     secretName: conduktor-ca-secret
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: ext-client-ca
-  namespace: cert-manager
-spec:
-  isCA: true
-  commonName: ext-client-ca
-  secretName: ext-client-ca-secret
-  privateKey:
-    algorithm: ECDSA
-    size: 256
-  issuerRef:
-    name: selfsigned-issuer
-    kind: ClusterIssuer
-    group: cert-manager.io
----
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: ext-client-issuer
-spec:
-  ca:
-    secretName: ext-client-ca-secret
 ---
 #### Components certificates
 apiVersion: cert-manager.io/v1
@@ -298,25 +272,60 @@ spec:
         name: conduktor-console-jks-password-secret
         key: password
 ---
-# Client certificate used by Conduktor Console to authenticate to Gateway
-# listeners that require mTLS (sslClientAuth: REQUIRE). Same CA as Gateway,
-# so Gateway's cert-manager-managed truststore trusts it automatically.
+# Client certificates used by Conduktor Console to authenticate on the Gateway
+# internal listener (mTLS, sslClientAuth: REQUIRE).
+#
+# The certificate IS the credential here: Gateway derives the principal from
+# the CN (GATEWAY_SSL_PRINCIPAL_MAPPING_RULES in gateway-values.yaml), so the
+# CN must match the Gateway service account name. Console registers two Kafka
+# clusters against the same Gateway under two identities, hence two certs.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: console-client-crt
+  name: console-sa-client-crt
   namespace: conduktor
 spec:
   isCA: false
-  secretName: console-client-crt-secret
-  # Cert subject is only used for chain validation; the SASL_PLAIN username
-  # (e.g. console-sa) is what Gateway uses as the auth principal.
+  secretName: console-sa-client-crt-secret
   subject:
     organizations:
       - conduktor
-  commonName: conduktor-console
-  dnsNames:
-    - conduktor-console.conduktor.svc.cluster.local
+  commonName: console-sa # -> Gateway principal "console-sa"
+  usages:
+    - client auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    name: conduktor-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: conduktor-console-jks-password-secret
+        key: password
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: client-sa-client-crt
+  namespace: conduktor
+spec:
+  isCA: false
+  secretName: client-sa-client-crt-secret
+  subject:
+    organizations:
+      - conduktor
+  commonName: client-sa # -> Gateway principal "client-sa"
+  usages:
+    - client auth
+    - digital signature
+    - key encipherment
   issuerRef:
     name: conduktor-issuer
     kind: ClusterIssuer
@@ -343,49 +352,13 @@ type: Opaque
 stringData:
   password: "conduktor"
 ---
-# External Kafka client cert for the README example (mTLS to Gateway external
-# listener which has sslClientAuth: REQUIRE). Signed by local-ca-issuer so
-# Gateway's cert-manager-managed truststore trusts it automatically.
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: external-kafka-client-crt
-  namespace: conduktor
-spec:
-  isCA: false
-  secretName: external-kafka-client-crt-secret
-  subject:
-    organizations:
-      - conduktor
-  commonName: external-kafka-client
-  dnsNames:
-    - external-kafka-client
-  usages:
-    - client auth
-    - digital signature
-    - key encipherment
-  issuerRef:
-    name: ext-client-issuer
-    kind: ClusterIssuer
-    group: cert-manager.io
-  privateKey:
-    algorithm: RSA
-    encoding: PKCS1
-    size: 2048
-  keystores:
-    jks:
-      create: true
-      passwordSecretRef:
-        name: conduktor-gateway-jks-password-secret
-        key: password
----
 #### trust-manager Bundles
 # Each Bundle composes a purpose-specific JKS truststore from a subset of the
 # per-service CAs above. trust-manager distributes the resulting Secret to
 # every namespace labeled trust-bundle: enabled.
 #
 #   kafka-stack-trust     : kafka + SR — mounted by SR (kafkastore) and Gateway (backend kafka)
-#   gateway-clients-trust : conduktor + ext-client CAs — Gateway listener mTLS truststore
+#   gateway-clients-trust : conduktor CA — Gateway internal listener mTLS truststore
 #   ext-services-trust    : ext-services CA — Gateway HTTPS calls (OIDC) and JVM-default
 #   console-trust         : everything Console needs (PG/OIDC/S3/SR/Gateway)
 #
@@ -417,12 +390,12 @@ kind: Bundle
 metadata:
   name: gateway-clients-trust
 spec:
+  # The internal listener is the only one doing mTLS and its clients are all
+  # Conduktor components, so conduktor-ca covers them. Add a source here for
+  # every extra CA whose certificates that listener should accept.
   sources:
     - secret:
         name: conduktor-ca-secret
-        key: ca.crt
-    - secret:
-        name: ext-client-ca-secret
         key: ca.crt
   target:
     secret:

@@ -52,7 +52,7 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 - **Kubernetes Secrets**: Store all sensitive data (passwords, API tokens, access keys) using Kubernetes Secrets, ideally managed by a secret manager like Vault.
 - **SSO**: Create a root account on the Console with a strong password and use Single Sign-On (SSO) for user management. Preferred SSO solution is **OIDC** with discovery rather than **LDAP**.
 - **Kafka Authentication and Authorization**: Use `SASL_SSL` for Kafka authentication with mechanisms like `PLAIN`, `SCRAM-SHA`, `OAUTHBEARER`, or `KERBEROS`. For authorization, use ACLs with a dedicated user for Conduktor Gateway.
-- **Conduktor Gateway Authentication and Authorization**: For extra layer of security use Gateway managed mode security with `SASL_SSL` and Gateway ACLs with service accounts.  
+- **Conduktor Gateway Authentication and Authorization**: For extra layer of security use Gateway managed mode security with Gateway ACLs and service accounts. Give each Gateway listener a single authentication method — for example `SSL` with `sslClientAuth: REQUIRE` (mTLS) on an internal listener and `SASL_SSL` with `OAUTHBEARER` on an external one — rather than requiring clients to present both a certificate and a SASL credential on the same endpoint.  
 - **Pod/Container Security Context**: Run container with a non-root user, in non-privileged mode and use read-only filesystems where possible.
 
 #### Monitoring and Logging

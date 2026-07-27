@@ -41,11 +41,6 @@ variable "gateway_api_url" {
   type        = string
 }
 
-variable "gateway_token_lifetime_seconds" {
-  description = "Lifetime of the Gateway token in seconds"
-  type        = number
-}
-
 variable "schema_registry_url" {
   description = "URL for the Schema Registry"
   type        = string
@@ -80,8 +75,13 @@ variable "kafka_password" {
   sensitive   = true
 }
 
-variable "console_kafka_keystore_location" {
-  description = "Path (inside Console pod) of the JKS keystore used as client cert for mTLS to Gateway listeners"
+variable "console_sa_keystore_location" {
+  description = "Path (inside Console pod) of the JKS keystore holding the console-sa client certificate, used for mTLS on the Gateway internal listener"
+  type        = string
+}
+
+variable "client_sa_keystore_location" {
+  description = "Path (inside Console pod) of the JKS keystore holding the client-sa client certificate, used for mTLS on the Gateway internal listener"
   type        = string
 }
 

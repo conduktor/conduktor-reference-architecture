@@ -69,20 +69,28 @@ platform:
     - name: ssl
       secret:
         secretName: console-trust
-    # Client keystore for mTLS to Gateway listeners with sslClientAuth: REQUIRE.
-    # Referenced per-cluster via ssl.keystore.location in terraform — Kafka
-    # clients in Console do not honor JVM-default keystore system properties.
-    - name: ssl-client-keystore
+    # Client keystores for the Gateway internal listener, which authenticates
+    # clients with mTLS only. One keystore per Gateway identity — the cert CN
+    # is the principal. Referenced per-cluster via ssl.keystore.location in
+    # terraform: Kafka clients in Console do not honor JVM-default keystore
+    # system properties.
+    - name: console-sa-keystore
       secret:
-        secretName: console-client-crt-secret
+        secretName: console-sa-client-crt-secret
+    - name: client-sa-keystore
+      secret:
+        secretName: client-sa-client-crt-secret
 
   extraVolumeMounts:
     # SSL volume that provide truststore.jks for SSL connections
     - name: ssl
       mountPath: /opt/conduktor/ssl
-    # Client keystore mounted at separate path to avoid overlap with truststore
-    - name: ssl-client-keystore
-      mountPath: /opt/conduktor/ssl/client
+    # Client keystores mounted at separate paths to avoid overlap with truststore
+    - name: console-sa-keystore
+      mountPath: /opt/conduktor/ssl/client/console-sa
+      readOnly: true
+    - name: client-sa-keystore
+      mountPath: /opt/conduktor/ssl/client/client-sa
       readOnly: true
 
   containerSecurityContext:

@@ -21,6 +21,11 @@ CAs by trust domain lets each component trust only what it actually needs
 - Console needs broad trust (it talks to PG, Keycloak, S3, SR, Gateway).
 - External Kafka clients only need to trust Gateway + the OIDC IdP.
 
+Client certificates carry a second job here: the Gateway internal listener is
+mTLS only, so the certificate is the credential. Gateway maps the certificate
+CN to a principal via `GATEWAY_SSL_PRINCIPAL_MAPPING_RULES`, which is why
+Console gets one certificate per identity rather than one per workload.
+
 ## CA hierarchy
 
 ```mermaid
@@ -31,29 +36,25 @@ flowchart TB
     KCA[Certificate<br/>kafka-stack-ca<br/>ns: cert-manager]
     ECA[Certificate<br/>ext-services-ca<br/>ns: cert-manager]
     CCA[Certificate<br/>conduktor-ca<br/>ns: cert-manager]
-    XCA[Certificate<br/>ext-client-ca<br/>ns: cert-manager]
 
     LCI[ClusterIssuer<br/>local-ca-issuer]
     KCI[ClusterIssuer<br/>kafka-stack-issuer]
     ECI[ClusterIssuer<br/>ext-services-issuer]
     CCI[ClusterIssuer<br/>conduktor-issuer]
-    XCI[ClusterIssuer<br/>ext-client-issuer]
 
     SI --> LCA --> LCI
     SI --> KCA --> KCI
     SI --> ECA --> ECI
     SI --> CCA --> CCI
-    SI --> XCA --> XCI
 
     LCI -. signs .-> ING([nginx ingress TLS<br/>console.conduktor.localhost<br/>gateway.conduktor.localhost])
     KCI -. signs .-> KFL([kafka-tls<br/>sr-crt-secret])
     ECI -. signs .-> EFL([pg-main-crt-secret<br/>pg-sql-crt-secret<br/>s3-crt-secret<br/>keycloak-crt-secret])
-    CCI -. signs .-> CFL([custom-console-crt-secret<br/>console-client-crt-secret<br/>conduktor-gateway-tls<br/>chart-managed])
-    XCI -. signs .-> XFL([external-kafka-client-crt-secret])
+    CCI -. signs .-> CFL([custom-console-crt-secret<br/>console-sa-client-crt-secret<br/>client-sa-client-crt-secret<br/>conduktor-gateway-tls<br/>chart-managed])
 ```
 
 **`selfsigned-issuer`** is the bootstrap root. It only exists so cert-manager
-can sign the five self-signed CA Certificates. In real prod each CA below
+can sign the four self-signed CA Certificates. In real prod each CA below
 would be supplied externally (by your IdP, let'sencrypt, DB provider, Kafka provider, etc.)
 and you would not have `selfsigned-issuer` at all.
 
@@ -73,9 +74,13 @@ issuers below.
 | `ext-services-issuer` | `s3-crt-secret` (cdk-deps) | MinIO S3 TLS |
 | `ext-services-issuer` | `keycloak-crt-secret` (cdk-deps) | Keycloak OIDC HTTPS |
 | `conduktor-issuer` | `custom-console-crt-secret` (conduktor) | Console HTTPS server cert |
-| `conduktor-issuer` | `console-client-crt-secret` (conduktor) | Console mTLS client cert → Gateway |
+| `conduktor-issuer` | `console-sa-client-crt-secret` (conduktor) | Console mTLS client cert → Gateway, principal `console-sa` |
+| `conduktor-issuer` | `client-sa-client-crt-secret` (conduktor) | Console mTLS client cert → Gateway, principal `client-sa` |
 | `conduktor-issuer` | `conduktor-gateway-tls` (conduktor, chart-managed) | Gateway listener server cert |
-| `ext-client-issuer` | `external-kafka-client-crt-secret` (conduktor) | External Kafka client cert (README example) |
+
+External Kafka clients authenticate with SASL/OAUTHBEARER over one-way TLS, so
+they have no client CA above. To put mTLS clients on that listener, create a CA
+for them and add it as a source on the `gateway-clients-trust` Bundle.
 
 ## Trust composition (trust-manager Bundles)
 
@@ -89,7 +94,6 @@ flowchart LR
     KCAS[(kafka-stack-ca-secret)]
     ECAS[(ext-services-ca-secret)]
     CCAS[(conduktor-ca-secret)]
-    XCAS[(ext-client-ca-secret)]
 
     KST[Bundle<br/>kafka-stack-trust]
     GCT[Bundle<br/>gateway-clients-trust]
@@ -102,11 +106,10 @@ flowchart LR
     ECAS --> CT
     CCAS --> GCT
     CCAS --> CT
-    XCAS --> GCT
 
     KST -.->|truststore.jks| SR([Schema Registry<br/>cdk-deps])
     KST -.->|truststore.jks| GWK([Gateway<br/>→ backend Kafka])
-    GCT -.->|truststore.jks| GWL([Gateway<br/>listener mTLS])
+    GCT -.->|truststore.jks| GWL([Gateway<br/>internal listener mTLS])
     EST -.->|truststore.jks| GWH([Gateway<br/>OIDC HTTPS / JVM-default])
     CT -.->|truststore.jks| CON([Console<br/>+ Cortex sidecar])
     CT -.->|exported to local| CLI([External Kafka client<br/>README example])
@@ -115,7 +118,7 @@ flowchart LR
 | Bundle | Sources | Consumers |
 |---|---|---|
 | `kafka-stack-trust` | kafka-stack-ca | SR kafkastore client, Gateway backend Kafka |
-| `gateway-clients-trust` | conduktor-ca, ext-client-ca | Gateway listener mTLS (`sslClientAuth: REQUIRE`) |
+| `gateway-clients-trust` | conduktor-ca | Gateway internal listener mTLS (`sslClientAuth: REQUIRE`) |
 | `ext-services-trust` | ext-services-ca | Gateway HTTPS calls (OIDC JWKS) + JVM-default truststore |
 | `console-trust` | kafka-stack-ca, ext-services-ca, conduktor-ca | Console (one mount for all outgoing TLS), and reused for the README external-client `truststore.jks` |
 
@@ -126,7 +129,7 @@ flowchart LR
 | Concern | Source | Mount path | Env var |
 |---|---|---|---|
 | Listener server cert | chart-managed (`tls.certManager.enabled`) | `/etc/gateway/tls/keystore.jks` | auto |
-| Listener mTLS truststore | `gateway-clients-trust` Bundle | `/etc/conduktor/tls/listener-trust/truststore.jks` | `GATEWAY_SSL_TRUST_STORE_PATH` |
+| Internal listener mTLS truststore | `gateway-clients-trust` Bundle | `/etc/conduktor/tls/listener-trust/truststore.jks` | `GATEWAY_SSL_TRUST_STORE_PATH` |
 | Backend Kafka truststore | `kafka-stack-trust` Bundle | `/etc/conduktor/tls/kafka-trust/truststore.jks` | `KAFKA_SSL_TRUSTSTORE_LOCATION` |
 | OIDC HTTPS / JVM default | `ext-services-trust` Bundle | `/etc/conduktor/tls/ext-services-trust/truststore.jks` | `JAVA_TOOL_OPTIONS` |
 
@@ -139,7 +142,8 @@ own volumes.
 | Concern | Source | Mount path | Env var |
 |---|---|---|---|
 | Console server cert | `custom-console-crt-secret` (chart `config.platform.https.existingSecret`) | mounted by chart | auto |
-| Client cert (mTLS to Gateway) | `console-client-crt-secret` | `/opt/conduktor/ssl/client/keystore.jks` | per-cluster `ssl.keystore.location` (terraform) |
+| Client cert (mTLS to Gateway, principal `console-sa`) | `console-sa-client-crt-secret` | `/opt/conduktor/ssl/client/console-sa/keystore.jks` | per-cluster `ssl.keystore.location` (terraform) |
+| Client cert (mTLS to Gateway, principal `client-sa`) | `client-sa-client-crt-secret` | `/opt/conduktor/ssl/client/client-sa/keystore.jks` | per-cluster `ssl.keystore.location` (terraform) |
 | Outgoing TLS truststore | `console-trust` Bundle | `/opt/conduktor/ssl/truststore.jks` | `CDK_SSL_TRUSTSTORE_PATH` |
 
 ### Schema Registry
@@ -151,12 +155,12 @@ own volumes.
 
 ### External Kafka client (README example)
 
-The local CLI uses the same Bundle as Console:
+The local CLI uses the same Bundle as Console. It authenticates with
+SASL/OAUTHBEARER, so trust is all it needs:
 
 | File | Source | Notes |
 |---|---|---|
 | `truststore.jks` | `console-trust` Bundle (exported by [01-start.sh](01-start.sh)) | Trusts Gateway (conduktor-ca) and OIDC (ext-services-ca) |
-| `keystore.jks` | `external-kafka-client-crt-secret` (exported by [01-start.sh](01-start.sh)) | Presented to Gateway listener mTLS |
 
 ## Adding a new external CA
 

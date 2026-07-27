@@ -8,20 +8,27 @@ gateway:
 
   secretRef: "gateway-secrets"
 
-  preview:
-    listeners: true
-
   securityMode: "GATEWAY_MANAGED"
   kafka:
     brokerIds:
       - "0-2"
+  # Each listener carries a single authentication method, so a client presents
+  # either a certificate or a credential, never both:
+  #
+  #   internal (9093) -> mTLS.       Callers: Conduktor Console.
+  #   external (9092) -> SASL/OAuth. Callers: Kafka clients outside the cluster.
   listeners:
+    # In-cluster clients authenticate with a certificate signed by conduktor-ca.
+    # The principal is the certificate CN (see GATEWAY_SSL_PRINCIPAL_MAPPING_RULES),
+    # which matches an EXTERNAL Gateway service account of the same name.
     internal:
-      securityProtocol: SASL_SSL
+      securityProtocol: SSL
       routing: sni
       ports:
         - "9093"
       sslClientAuth: "REQUIRE"
+    # Clients outside the cluster authenticate against the IdP with
+    # SASL/OAUTHBEARER. One-way TLS — no client certificate to distribute.
     external:
       securityProtocol: SASL_SSL
       routing: sni
@@ -30,7 +37,7 @@ gateway:
       advertisedHost: "gateway.conduktor.localhost"
       advertisedHostPattern: "broker{{nodeId}}.gateway.conduktor.localhost"
       bootstrapHostPattern: "gateway.conduktor.localhost"
-      sslClientAuth: "REQUIRE"
+      sslClientAuth: "NONE"
 
   env:
     # # Gateway server general configuration
@@ -51,12 +58,21 @@ gateway:
     KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/kafka-trust/truststore.jks
     KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
 
-    # Listener mTLS truststore (clients -> Gateway). Contains conduktor-ca
-    # (Console client cert) + ext-client-ca (external Kafka clients).
+    # Listener mTLS truststore, used by the internal listener only
+    # (sslClientAuth: REQUIRE). Contains conduktor-ca, which signs the Console
+    # client certificates.
     GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/listener-trust/truststore.jks
     GATEWAY_SSL_TRUST_STORE_TYPE: "JKS"
 
-    # console-sa/client-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
+    # Derive the mTLS principal from the certificate CN instead of the full
+    # subject DN, so "CN=console-sa,O=conduktor" authenticates as "console-sa".
+    # Without this the principal would be the whole DN and would not match the
+    # service account names below. Same rule syntax as Kafka's
+    # ssl.principal.mapping.rules.
+    GATEWAY_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^CN=([^,]+).*$/$1/,DEFAULT"
+
+    # console-sa/client-sa connect on the internal listener with mTLS (principal
+    # = certificate CN); app-1 connects on the external listener with OIDC.
     GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
     GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
@@ -77,13 +93,13 @@ gateway:
     # Three trust-manager Bundle mounts — one per trust domain so each
     # truststore can evolve independently. All mounted under
     # /etc/conduktor/tls/* (away from /etc/gateway/tls/ which the chart owns).
-    - name: listener-trust       # clients -> Gateway listener mTLS
+    - name: listener-trust       # clients -> Gateway internal listener mTLS
       secret:
         secretName: gateway-clients-trust
     - name: kafka-trust          # Gateway -> backend Kafka brokers
       secret:
         secretName: kafka-stack-trust
-    - name: ext-services-trust   # Gateway HTTPS calls (OIDC, interceptors) + JVM-default 
+    - name: ext-services-trust   # Gateway HTTPS calls (OIDC, interceptors) + JVM-default
       secret:
         secretName: ext-services-trust
 
@@ -108,9 +124,9 @@ service:
     type: LoadBalancer
 
 # Gateway server cert: issued by conduktor-issuer (per-service CA).
-# Listener mTLS truststore is NOT chart-managed here, we supply our own
-# Bundle-backed JKS via gateway-clients-trust (see gateway.volumes above)
-# and wire GATEWAY_SSL_TRUST_STORE_PATH manually.
+# The internal listener's mTLS truststore is NOT chart-managed here, we supply
+# our own Bundle-backed JKS via gateway-clients-trust (see gateway.volumes
+# above) and wire GATEWAY_SSL_TRUST_STORE_PATH manually.
 tls:
   keystore:
     passwordSecretRef:

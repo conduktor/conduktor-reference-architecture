@@ -35,6 +35,10 @@ waitSecretCreated cdk-deps s3-crt-secret
 # console-trust covers everything Console needs.
 waitSecretCreated cdk-deps kafka-stack-trust
 waitSecretCreated conduktor console-trust
+# Client certificates Console mounts to authenticate on the Gateway internal
+# listener (mTLS only). Console cannot start without them.
+waitSecretCreated conduktor console-sa-client-crt-secret
+waitSecretCreated conduktor client-sa-client-crt-secret
 
 echo
 echo "03 - Installing Conduktor dependencies components"
@@ -63,9 +67,8 @@ echo "05 - Update KubeDNS config"
 kubectl apply -f ${STACK_DIR}/05-coredns-custom.yaml
 kubectl -n kube-system delete pod -l k8s-app=kube-dns
 
-# Extract truststore and external Kafka client keystore for local CLI examples (README).
-# Reuse console-trust for the external client — it covers conduktor-ca (for the
-# Gateway server cert) and ext-services-ca (for the OIDC token-fetch HTTPS call).
-waitSecretCreated conduktor external-kafka-client-crt-secret
+# Extract the truststore for local CLI examples (README). The Gateway external
+# listener uses one-way TLS, so a local client only needs trust. Reuse
+# console-trust: it covers conduktor-ca (for the Gateway server cert) and
+# ext-services-ca (for the OIDC token-fetch HTTPS call).
 kubectl get secret console-trust -n conduktor -o jsonpath='{.data.truststore\.jks}' | base64 --decode > $SCRIPT_DIR/truststore.jks
-kubectl get secret external-kafka-client-crt-secret -n conduktor -o jsonpath='{.data.keystore\.jks}' | base64 --decode > $SCRIPT_DIR/keystore.jks
