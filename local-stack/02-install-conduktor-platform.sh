@@ -47,8 +47,15 @@ helm upgrade --install -n conduktor \
   --set cortex.podAnnotations."checksum/secrets"="${console_secrets_sha256sum}" \
   conduktor-console console
 
-echo "Wait for Conduktor platform to be available"
-waitAvailable conduktor deployment/conduktor-gateway
-waitAvailable conduktor deployment/conduktor-console
+# Wait for the rollout to finish, not just for the Deployment to report
+# Available. On an upgrade, Available goes true as soon as minAvailable is met,
+# while pods from the previous ReplicaSet are still terminating and still
+# receiving traffic through the Service. A Gateway pod that is shutting down has
+# already closed the producer it writes its state with, so an Admin API call
+# landing on it fails with "Cannot perform operation after producer has been
+# closed" — which is how this surfaces in the terraform step that follows.
+echo "Wait for Conduktor platform rollout to complete"
+waitRollout conduktor deployment/conduktor-gateway
+waitRollout conduktor deployment/conduktor-console
 
 rm -rf "${tmp_dir:?Missing tmp dir}"

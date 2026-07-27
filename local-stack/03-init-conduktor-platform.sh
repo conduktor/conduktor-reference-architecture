@@ -11,6 +11,13 @@ TERRAFORM_DIR=${SCRIPT_DIR}/provisioning
 . "${SCRIPT_DIR}/kubernetes_utils.sh"
 
 checkKubeContext
+
+# Terraform drives the Console and Gateway APIs, so every pod behind them must
+# be from the current generation. Re-checked here because this target can be run
+# on its own, right after a helm upgrade.
+waitRollout conduktor deployment/conduktor-gateway
+waitRollout conduktor deployment/conduktor-console
+
 pushd "${TERRAFORM_DIR}"
   echo "Initializing conduktor-platform"
   terraform init --upgrade

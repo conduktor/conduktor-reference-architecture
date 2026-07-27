@@ -9,14 +9,15 @@ gateway:
   secretRef: "gateway-secrets"
 
   securityMode: "GATEWAY_MANAGED"
+  aclEnabled: "true"
   kafka:
     brokerIds:
       - "0-2"
-  # Each listener carries a single authentication method, so a client presents
-  # either a certificate or a credential, never both:
+  # A client proves who it is with a certificate or with a SASL credential,
+  # never both at once:
   #
-  #   internal (9093) -> mTLS.       Callers: Conduktor Console.
-  #   external (9092) -> SASL/OAuth. Callers: Kafka clients outside the cluster.
+  #   internal (9093) -> mTLS. Callers: Conduktor Console.
+  #   external (9092) -> SASL. Callers: Kafka clients outside the cluster.
   listeners:
     # In-cluster clients authenticate with a certificate signed by conduktor-ca.
     # The principal is the certificate CN (see GATEWAY_SSL_PRINCIPAL_MAPPING_RULES),
@@ -27,8 +28,10 @@ gateway:
       ports:
         - "9093"
       sslClientAuth: "REQUIRE"
-    # Clients outside the cluster authenticate against the IdP with
-    # SASL/OAUTHBEARER. One-way TLS — no client certificate to distribute.
+    # Clients outside the cluster authenticate with SASL over one-way TLS, so
+    # there is no client certificate to distribute. Both mechanisms Gateway
+    # offers are available here: OAUTHBEARER for identities the IdP owns, and
+    # PLAIN for service accounts Gateway itself issues tokens for.
     external:
       securityProtocol: SASL_SSL
       routing: sni
@@ -73,6 +76,11 @@ gateway:
 
     # console-sa/client-sa connect on the internal listener with mTLS (principal
     # = certificate CN); app-1 connects on the external listener with OIDC.
+    #
+    # app-2 also connects on the external listener, with a Gateway-issued
+    # SASL/PLAIN token, and is intentionally left out: superusers bypass
+    # authorization, so it is the one identity here whose ACLs are enforced
+    # (provisioned by terraform, see modules/04-console-service-accounts).
     GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
     GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"

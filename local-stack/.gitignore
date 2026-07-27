@@ -1,1 +1,3 @@
 *.jks
+# Rendered by terraform, contains a Gateway-issued SASL/PLAIN token
+client_plain.properties

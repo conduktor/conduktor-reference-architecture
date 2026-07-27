@@ -32,22 +32,36 @@ module "gw-service-accounts" {
   source = "./modules/02-gw-service-accounts"
 
   # input variables
-  # Both listeners authenticate against an outside authority — cert-manager or
-  # Keycloak — so every identity below is an EXTERNAL service account.
   service_accounts = {
-    # Internal listener (mTLS): external name is the client certificate CN.
+    # Internal listener, mTLS: the external name is the client certificate CN.
     # Certificates are issued by cert-manager, see k3d-stack/02-infra-crds.yaml.
-    "console-sa" = ["console-sa"]
-    "client-sa"  = ["client-sa"]
-    # External listener (SASL/OAUTHBEARER): external name is the value of the
+    "console-sa" = { type = "EXTERNAL", external_names = ["console-sa"] }
+    "client-sa"  = { type = "EXTERNAL", external_names = ["client-sa"] }
+    # External listener, SASL/OAUTHBEARER: the external name is the value of the
     # claim named by GATEWAY_OAUTH_SUB_CLAIM_NAME (azp = the Keycloak client id).
-    "app-1" = ["app-1"]
+    "app-1" = { type = "EXTERNAL", external_names = ["app-1"] }
+    # External listener, SASL/PLAIN: Gateway issues the token itself, so the app
+    # needs no IdP client. Credentials land in client_plain.properties below.
+    "app-2" = { type = "LOCAL" }
   }
+  token_lifetime_seconds = var.gateway_token_lifetime_seconds
 
   # provider configuration
   providers = {
     conduktor = conduktor.gateway
   }
+}
+
+# Render a ready-to-use client config for the SASL/PLAIN service account. The
+# token is generated at apply time, so this file cannot be committed — it is
+# gitignored and removed by 04-stop.sh.
+resource "local_sensitive_file" "client_plain_properties" {
+  filename        = "${path.module}/../client_plain.properties"
+  file_permission = "0600"
+  content = templatefile("${path.module}/templates/client_plain.properties.tftpl", {
+    username = "app-2"
+    token    = module.gw-service-accounts.tokens["app-2"]
+  })
 }
 
 module "clusters" {
@@ -117,6 +131,50 @@ module "clusters" {
       }
     }
   ]
+
+  # provider configuration
+  providers = {
+    conduktor = conduktor.console
+  }
+}
+
+###
+# ACLs for the SASL/PLAIN service account.
+#
+# app-2 is deliberately absent from GATEWAY_SUPER_USERS, so Gateway authorizes
+# every request it makes against the ACLs below. It can work with the
+# website-analytics topics and nothing else — `kafka-topics --list` will not
+# even show sales.events.avro, because metadata is filtered by Describe.
+#
+# Keying off the Gateway service account name keeps the two in sync and orders
+# the apply: the account exists before Console writes ACLs for it.
+###
+module "console-service-accounts" {
+  source = "./modules/04-console-service-accounts"
+
+  # input variables
+  service_accounts = {
+    (module.gw-service-accounts.service_accounts["app-2"].name) = {
+      cluster = module.clusters.clusters["gateway-cluster"].name
+      labels = {
+        "team" = "website-analytics"
+      }
+      acls = [
+        {
+          name         = "website-analytics."
+          type         = "TOPIC"
+          pattern_type = "PREFIXED"
+          operations   = ["Describe", "Read", "Write"]
+        },
+        {
+          name         = "app-2."
+          type         = "CONSUMER_GROUP"
+          pattern_type = "PREFIXED"
+          operations   = ["Describe", "Read"]
+        }
+      ]
+    }
+  }
 
   # provider configuration
   providers = {

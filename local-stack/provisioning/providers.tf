@@ -4,6 +4,11 @@ terraform {
       source  = "conduktor/conduktor"
       version = ">= 0.5.0"
     }
+    # Renders client_plain.properties from the token terraform generates.
+    local = {
+      source  = "hashicorp/local"
+      version = ">= 2.4.0"
+    }
   }
 }
 

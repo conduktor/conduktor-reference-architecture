@@ -12,6 +12,8 @@ gateway_admin_password = "adminP4ss!"
 gateway_bootstrap_servers = "conduktor-gateway-internal.conduktor.svc.cluster.local:9093"
 gateway_api_url = "https://conduktor-gateway-internal.conduktor.svc.cluster.local:8888"
 
+gateway_token_lifetime_seconds = 2630000  # 1 month
+
 schema_registry_url      = "https://schemaregistry.cdk-deps.svc.cluster.local:8081"
 schema_registry_user     = "sc-user"
 schema_registry_password = "sr-password"

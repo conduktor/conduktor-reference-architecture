@@ -109,11 +109,27 @@ certificate and a SASL credential on the same endpoint:
 | Listener | Port | Authentication | Clients |
 |---|---|---|---|
 | `internal` | 9093 | mTLS (`SSL`, `sslClientAuth: REQUIRE`) | Conduktor Console |
-| `external` | 9092 | SASL/OAUTHBEARER over one-way TLS | Kafka clients outside the cluster |
+| `external` | 9092 | SASL over one-way TLS, `OAUTHBEARER` or `PLAIN` | Kafka clients outside the cluster |
 
 Console connects on the internal listener with a client certificate issued by cert-manager. Gateway derives the
 principal from the certificate CN (`GATEWAY_SSL_PRINCIPAL_MAPPING_RULES`), so the `console-sa` and `client-sa`
 certificates map to the EXTERNAL Gateway service accounts of the same name.
+
+The external listener offers both SASL mechanisms, which is how you onboard apps that live in different worlds:
+
+| Service account | Type | Mechanism | Credential comes from | Authorization |
+|---|---|---|---|---|
+| `app-1` | `EXTERNAL` | `OAUTHBEARER` | Keycloak, matched on the `azp` claim | superuser |
+| `app-2` | `LOCAL` | `PLAIN` | a token Gateway issues and signs itself | Kafka ACLs |
+
+`LOCAL` accounts are useful when an app has no IdP client of its own — Gateway becomes the credential authority
+for it.
+
+`app-1` is a superuser, which is the shortest path to a working example but bypasses authorization entirely.
+`app-2` is deliberately left out of `GATEWAY_SUPER_USERS` so its ACLs are enforced; terraform grants it
+`Describe`/`Read`/`Write` on the `website-analytics.` topic prefix and nothing else
+(`provisioning/modules/04-console-service-accounts`). Those ACLs are declared against the Console cluster and
+land in the Gateway virtual cluster behind it, so they apply on whichever listener the client connects to.
 
 ### Conduktor Gateway
 
@@ -161,6 +177,51 @@ docker run --rm --network host \
 > The external listener uses one-way TLS (`sslClientAuth: NONE`), so clients
 > only need `truststore.jks`, exported to this directory by
 > `make start-local-stack`.
+
+#### Connecting with a Gateway-managed service account
+
+The same listener accepts SASL/PLAIN, using a token Gateway issues for a `LOCAL` service account. Because that
+token only exists once `make init-conduktor-platform` has run, terraform renders the client config for you at
+`client_plain.properties` (gitignored — it holds a live credential):
+
+```bash
+kafka-topics --list \
+    --bootstrap-server gateway.conduktor.localhost:9092 \
+    --command-config client_plain.properties
+```
+
+No `KAFKA_OPTS` this time: PLAIN needs no call out to the IdP, so the truststore in the properties file is
+enough.
+
+This is also where the ACLs become visible. `app-2` only holds `Describe` on the `website-analytics.` prefix,
+so that is all the listing contains:
+
+```
+website-analytics.dev.events.json
+website-analytics.events.json
+```
+
+Run the same command with `client.properties` and the superuser `app-1` sees everything instead —
+`sales.events.avro`, `console-auditlog`, `_schemas` and the `_conduktor_gateway_*` internal topics.
+
+Unauthorized topics are filtered out of the metadata response rather than returned and rejected, so writing to
+one fails as though it did not exist, not with an authorization error:
+
+```bash
+echo "hello" | kafka-console-producer \
+    --bootstrap-server gateway.conduktor.localhost:9092 \
+    --producer.config client_plain.properties \
+    --topic sales.events.avro
+# ERROR Error when sending message to topic sales.events.avro ...
+# org.apache.kafka.common.errors.TimeoutException:
+#   Topic sales.events.avro not present in metadata after 60000 ms.
+```
+
+To inspect or rotate the token:
+
+```bash
+cd provisioning && terraform output -json gateway_service_account_tokens
+```
 
 ### Identity Provider
 

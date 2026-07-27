@@ -41,6 +41,11 @@ variable "gateway_api_url" {
   type        = string
 }
 
+variable "gateway_token_lifetime_seconds" {
+  description = "Lifetime of the SASL/PLAIN tokens issued to Gateway LOCAL service accounts, in seconds"
+  type        = number
+}
+
 variable "schema_registry_url" {
   description = "URL for the Schema Registry"
   type        = string
