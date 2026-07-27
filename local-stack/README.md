@@ -88,6 +88,8 @@ make init-conduktor-platform
 
 Provisioning create resources inside Conduktor Console and Gateway.
 
+> NOTE: This reference uses Terraform, but you can also manage Conduktor resources via the [Conduktor CLI](https://docs.conduktor.io/guide/conduktor-in-production/automate/cli-automation). The CLI can be [enabled with state](https://docs.conduktor.io/guide/conduktor-in-production/automate/cli-automation#manage-state) to behave similarly to Terraform. There are [Gateway yaml resources](https://docs.conduktor.io/guide/reference/gateway-reference) and [Console yaml resources](https://docs.conduktor.io/guide/reference/console-reference) that can be managed with the CLI. 
+
 ### Conduktor Console
 
 You can then access Conduktor Console at [https://console.conduktor.localhost](https://console.conduktor.localhost) 
@@ -220,7 +222,7 @@ echo "hello" | kafka-console-producer \
 To inspect or rotate the token:
 
 ```bash
-cd provisioning && terraform output -json gateway_service_account_tokens
+pushd provisioning; terraform output -json gateway_service_account_tokens; popd
 ```
 
 ### Identity Provider

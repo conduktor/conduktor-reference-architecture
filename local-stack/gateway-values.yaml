@@ -13,13 +13,12 @@ gateway:
   kafka:
     brokerIds:
       - "0-2"
-  # A client proves who it is with a certificate or with a SASL credential,
-  # never both at once:
+  # A client proves who it is with a certificate or with a SASL credential
   #
   #   internal (9093) -> mTLS. Callers: Conduktor Console.
   #   external (9092) -> SASL. Callers: Kafka clients outside the cluster.
   listeners:
-    # In-cluster clients authenticate with a certificate signed by conduktor-ca.
+    # Kafka clients inside of Kubernetes authenticate with mTLS using a certificate signed by conduktor-ca.
     # The principal is the certificate CN (see GATEWAY_SSL_PRINCIPAL_MAPPING_RULES),
     # which matches an EXTERNAL Gateway service account of the same name.
     internal:
@@ -28,10 +27,10 @@ gateway:
       ports:
         - "9093"
       sslClientAuth: "REQUIRE"
-    # Clients outside the cluster authenticate with SASL over one-way TLS, so
-    # there is no client certificate to distribute. Both mechanisms Gateway
+    # Clients outside Kubernetes authenticate with SASL over one-way TLS, so
+    # there is no client certificate to distribute. Both SASL mechanisms Gateway
     # offers are available here: OAUTHBEARER for identities the IdP owns, and
-    # PLAIN for service accounts Gateway itself issues tokens for.
+    # PLAIN for service accounts Gateway itself issues passwords for.
     external:
       securityProtocol: SASL_SSL
       routing: sni
@@ -56,7 +55,7 @@ gateway:
     KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
     KAFKA_SASL_MECHANISM: "PLAIN"
 
-    # Truststore for Gateway kafka client -> backend Kafka brokers.
+    # Truststore for Gateway -> backend Kafka brokers.
     # Contains only the kafka-stack-ca (signs kafka brokers + schema registry).
     KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/kafka-trust/truststore.jks
     KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
@@ -93,7 +92,7 @@ gateway:
 
     # Gateway HTTPS Admin API keystore is wired by the chart via
     # tls.certManager.httpsAdminApi.enabled: true (same cert-manager keystore).
-    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    # GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
     # Admin API mTLS not enabled here; would mirror the listener pattern.
     # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/listener-trust/truststore.jks"
 
@@ -144,7 +143,10 @@ tls:
     enabled: true
     issuerRef:
       name: conduktor-issuer
-      kind: ClusterIssuer
+      kind:
+    duration: "2160h"                 # Certificate validity (default 90 days)
+    renewBefore: "360h"               # Renew 15 days before expiry
+    sslContextRefreshMinutes: 5       # How often Gateway polls the keystore for updates
     truststore:
       enabled: false # using gateway-clients-trust Bundle instead
     httpsAdminApi:
