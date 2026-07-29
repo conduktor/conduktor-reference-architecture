@@ -23,7 +23,7 @@ spec:
   repo: https://charts.jetstack.io
   chart: cert-manager
   targetNamespace: cert-manager
-  version: v1.17.0
+  version: v1.20.2
   set:
     crds.enabled: "true"
 ---
@@ -35,7 +35,7 @@ metadata:
 spec:
   repo: https://charts.jetstack.io
   chart: trust-manager
-  version: v0.16.0
+  version: v0.22.1
   targetNamespace: cert-manager
   set:
     crds.enabled: "true"

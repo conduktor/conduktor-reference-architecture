@@ -14,11 +14,23 @@ resource "conduktor_console_kafka_cluster_v2" "clusters" {
     display_name      = each.value.displayName
     description       = each.value.description
     bootstrap_servers = each.value.kafka.bootstrapServers
-    properties = {
-      "sasl.jaas.config"  = "org.apache.kafka.common.security.plain.PlainLoginModule required username='${each.value.kafka.saslUsername}' password='${each.value.kafka.saslPassword}';"
-      "security.protocol" = each.value.kafka.securityProtocol
-      "sasl.mechanism"    = each.value.kafka.saslMechanism
-    }
+    properties = merge(
+      {
+        "security.protocol" = each.value.kafka.securityProtocol
+      },
+      # SASL/PLAIN credentials, only for clusters that authenticate with SASL.
+      each.value.kafka.saslMechanism != null ? {
+        "sasl.jaas.config" = "org.apache.kafka.common.security.plain.PlainLoginModule required username='${each.value.kafka.saslUsername}' password='${each.value.kafka.saslPassword}';"
+        "sasl.mechanism"   = each.value.kafka.saslMechanism
+      } : {},
+      # Client certificate, for listeners with sslClientAuth REQUIRE/OPTIONAL.
+      each.value.kafka.sslKeystoreLocation != null ? {
+        "ssl.keystore.location" = each.value.kafka.sslKeystoreLocation
+        "ssl.keystore.password" = each.value.kafka.sslKeystorePassword
+        "ssl.key.password"      = each.value.kafka.sslKeystorePassword
+        "ssl.keystore.type"     = "JKS"
+      } : {}
+    )
 
     schema_registry = each.value.schemaRegistry != null ? {
       confluent_like = {

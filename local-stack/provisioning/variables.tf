@@ -31,13 +31,18 @@ variable "gateway_admin_password" {
   sensitive   = true
 }
 
-variable "bootstrap_servers" {
+variable "gateway_bootstrap_servers" {
   description = "Gateway bootstrap servers"
   type        = string
 }
 
+variable "gateway_api_url" {
+  description = "Gateway API URL"
+  type        = string
+}
+
 variable "gateway_token_lifetime_seconds" {
-  description = "Lifetime of the Gateway token in seconds"
+  description = "Lifetime of the SASL/PLAIN tokens issued to Gateway LOCAL service accounts, in seconds"
   type        = number
 }
 
@@ -71,6 +76,22 @@ variable "gateway_truststore_password" {
 
 variable "kafka_password" {
   description = "Password for the Kafka user"
+  type        = string
+  sensitive   = true
+}
+
+variable "console_sa_keystore_location" {
+  description = "Path (inside Console pod) of the JKS keystore holding the console-sa client certificate, used for mTLS on the Gateway internal listener"
+  type        = string
+}
+
+variable "client_sa_keystore_location" {
+  description = "Path (inside Console pod) of the JKS keystore holding the client-sa client certificate, used for mTLS on the Gateway internal listener"
+  type        = string
+}
+
+variable "console_kafka_keystore_password" {
+  description = "Password of the Console Kafka client keystore"
   type        = string
   sensitive   = true
 }

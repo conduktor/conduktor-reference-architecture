@@ -7,13 +7,46 @@ gateway:
       memory: 1Gi
 
   secretRef: "gateway-secrets"
+
+  securityMode: "GATEWAY_MANAGED"
+  aclEnabled: "true"
+  kafka:
+    brokerIds:
+      - "0-2"
+  # A client proves who it is with a certificate or with a SASL credential
+  #
+  #   internal (9093) -> mTLS. Callers: Conduktor Console.
+  #   external (9092) -> SASL. Callers: Kafka clients outside the cluster.
+  listeners:
+    # Kafka clients inside of Kubernetes authenticate with mTLS using a certificate signed by conduktor-ca.
+    # The principal is the certificate CN (see GATEWAY_SSL_PRINCIPAL_MAPPING_RULES),
+    # which matches an EXTERNAL Gateway service account of the same name.
+    internal:
+      securityProtocol: SSL
+      routing: sni
+      ports:
+        - "9093"
+      sslClientAuth: "REQUIRE"
+    # Clients outside Kubernetes authenticate with SASL over one-way TLS, so
+    # there is no client certificate to distribute. Both SASL mechanisms Gateway
+    # offers are available here: OAUTHBEARER for identities the IdP owns, and
+    # PLAIN for service accounts Gateway itself issues passwords for.
+    external:
+      securityProtocol: SASL_SSL
+      routing: sni
+      ports:
+        - "9092"
+      advertisedHost: "gateway.conduktor.localhost"
+      advertisedHostPattern: "broker{{nodeId}}.gateway.conduktor.localhost"
+      bootstrapHostPattern: "gateway.conduktor.localhost"
+      sslClientAuth: "NONE"
+
   env:
     # # Gateway server general configuration
     # LOG4J2_APPENDER_LAYOUT: "json"
     # LOG4J2_ORG_APACHE_KAFKA_LEVEL: debug
     # LOG4J2_IO_CONDUKTOR_LEVEL: "DEBUG"
     # LOG4J2_IO_CONDUKTOR_PROXY_NETWORK_LEVEL: "DEBUG" # to debug SNI routing and other network issues
-
 
     #### Backend kafka configuration
     ##
@@ -22,58 +55,72 @@ gateway:
     KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
     KAFKA_SASL_MECHANISM: "PLAIN"
 
-    # Truststore for Gateway kafka client -> Kafka brokers
-    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/truststore/truststore.jks
+    # Truststore for Gateway -> backend Kafka brokers.
+    # Contains only the kafka-stack-ca (signs kafka brokers + schema registry).
+    KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/conduktor/tls/kafka-trust/truststore.jks
     KAFKA_SSL_TRUSTSTORE_TYPE: "JKS"
 
-    #### Gateway Kafka proxy configuration for clients
-    ##
-    GATEWAY_ADVERTISED_HOST: "gateway.conduktor.localhost" # external hostname of the gateway
+    # Listener mTLS truststore, used by the internal listener only
+    # (sslClientAuth: REQUIRE). Contains conduktor-ca, which signs the Console
+    # client certificates.
+    GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/listener-trust/truststore.jks
+    GATEWAY_SSL_TRUST_STORE_TYPE: "JKS"
 
-    # SNI routing configuration
-    GATEWAY_ROUTING_MECHANISM: host
-    GATEWAY_ADVERTISED_SNI_PORT: "9092"
-    GATEWAY_SNI_HOST_SEPARATOR: "." # e.g. "brokermain0" + "." + "gateway.conduktor.localhost"
-    GATEWAY_FEATURE_FLAGS_INTERNAL_LOAD_BALANCING: "false" # https://docs.conduktor.io/gateway/reference/load-balancing/#external-load-balancing
+    # Derive the mTLS principal from the certificate CN instead of the full
+    # subject DN, so "CN=console-sa,O=conduktor" authenticates as "console-sa".
+    # Without this the principal would be the whole DN and would not match the
+    # service account names below. Same rule syntax as Kafka's
+    # ssl.principal.mapping.rules.
+    GATEWAY_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^CN=([^,]+).*$/$1/,DEFAULT"
 
-    GATEWAY_SECURITY_MODE: "GATEWAY_MANAGED" # since Gateway 3.10.0
-    GATEWAY_SECURITY_PROTOCOL: "SASL_SSL"
-    GATEWAY_ACL_ENABLED: "true"
-    # console-sa/client-sa will connect over SASL/PLAIN and app-1 will connect over OIDC
+    # console-sa/client-sa connect on the internal listener with mTLS (principal
+    # = certificate CN); app-1 connects on the external listener with OIDC.
+    #
+    # app-2 also connects on the external listener, with a Gateway-issued
+    # SASL/PLAIN token, and is intentionally left out: superusers bypass
+    # authorization, so it is the one identity here whose ACLs are enforced
+    # (provisioned by terraform, see modules/04-console-service-accounts).
     GATEWAY_SUPER_USERS: "console-sa;client-sa;app-1"
     GATEWAY_OAUTH_JWKS_URL: "https://keycloak.cdk-deps.svc.cluster.local/realms/conduktor-realm/protocol/openid-connect/certs"
     GATEWAY_OAUTH_EXPECTED_ISSUER: "https://oidc.localhost/realms/conduktor-realm"
     GATEWAY_OAUTH_EXPECTED_AUDIENCES: "[account]"
     GATEWAY_OAUTH_SUB_CLAIM_NAME: "azp"
 
-    # # Keystore for Gateway TLS certificate
+    # Keystore for Gateway TLS certificate
     # GATEWAY_SSL_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks" # set by tls.enable
     GATEWAY_SSL_KEY_TYPE: "JKS"
 
-    # # Truststore for mTLS authentication of Gateway clients
-    # GATEWAY_SSL_TRUST_STORE_PATH: /etc/conduktor/tls/truststore/truststore.jks
-
-    # # Gateway HTTP API
-    # # Gateway HTTPS configuration. Uncomment if you want to use TLS passthrough
-    GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
-    # # Truststore for mTLS authentication of Gateway clients
-    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/truststore/truststore.jks"
+    # Gateway HTTPS Admin API keystore is wired by the chart via
+    # tls.certManager.httpsAdminApi.enabled: true (same cert-manager keystore).
+    # GATEWAY_HTTPS_KEY_STORE_PATH: "/etc/gateway/tls/keystore.jks"
+    # Admin API mTLS not enabled here; would mirror the listener pattern.
+    # GATEWAY_HTTPS_TRUST_STORE_PATH: "/etc/conduktor/tls/listener-trust/truststore.jks"
 
   volumes:
-    # Mount truststore secrets for kafka and http client
-    - name: truststore
+    # Three trust-manager Bundle mounts — one per trust domain so each
+    # truststore can evolve independently. All mounted under
+    # /etc/conduktor/tls/* (away from /etc/gateway/tls/ which the chart owns).
+    - name: listener-trust       # clients -> Gateway internal listener mTLS
       secret:
-        secretName: bundle-truststore # secret with truststore.jks containing kafka and schema registry certificates
+        secretName: gateway-clients-trust
+    - name: kafka-trust          # Gateway -> backend Kafka brokers
+      secret:
+        secretName: kafka-stack-trust
+    - name: ext-services-trust   # Gateway HTTPS calls (OIDC, interceptors) + JVM-default
+      secret:
+        secretName: ext-services-trust
 
   volumeMounts:
-    # Mount truststore secrets for kafka and http client
-    - name: truststore
-      mountPath: /etc/conduktor/tls/truststore
+    - name: listener-trust
+      mountPath: /etc/conduktor/tls/listener-trust
+      readOnly: true
+    - name: kafka-trust
+      mountPath: /etc/conduktor/tls/kafka-trust
+      readOnly: true
+    - name: ext-services-trust
+      mountPath: /etc/conduktor/tls/ext-services-trust
       readOnly: true
 
-  portRange:
-    start: 9092
-    count: 1
   admin:
     port: 8888
     securedMetrics: false
@@ -82,14 +129,28 @@ service:
   external:
     enable: true
     type: LoadBalancer
-    admin: true
 
-# Mount keystore for TLS
+# Gateway server cert: issued by conduktor-issuer (per-service CA).
+# The internal listener's mTLS truststore is NOT chart-managed here, we supply
+# our own Bundle-backed JKS via gateway-clients-trust (see gateway.volumes
+# above) and wire GATEWAY_SSL_TRUST_STORE_PATH manually.
 tls:
-  enable: true
-  secretRef: "gateway-tls-secret"
-  keystoreKey: keystore.jks
-  keystoreFile: keystore.jks
+  keystore:
+    passwordSecretRef:
+      name: conduktor-gateway-jks-password-secret
+      key: password
+  certManager:
+    enabled: true
+    issuerRef:
+      name: conduktor-issuer
+      kind:
+    duration: "2160h"                 # Certificate validity (default 90 days)
+    renewBefore: "360h"               # Renew 15 days before expiry
+    sslContextRefreshMinutes: 5       # How often Gateway polls the keystore for updates
+    truststore:
+      enabled: false # using gateway-clients-trust Bundle instead
+    httpsAdminApi:
+      enabled: true
 
 metrics:
   prometheus:
