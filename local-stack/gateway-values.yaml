@@ -143,7 +143,7 @@ tls:
     enabled: true
     issuerRef:
       name: conduktor-issuer
-      kind:
+      kind: ClusterIssuer
     duration: "2160h"                 # Certificate validity (default 90 days)
     renewBefore: "360h"               # Renew 15 days before expiry
     sslContextRefreshMinutes: 5       # How often Gateway polls the keystore for updates
