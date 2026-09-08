@@ -50,7 +50,6 @@ gateway:
 
     #### Backend kafka configuration
     ##
-    GATEWAY_UPSTREAM_CONNECTION_POOL_TYPE: "ROUND_ROBIN" # multiplexing optimization
     KAFKA_BOOTSTRAP_SERVERS: "kafka-controller-0.kafka-controller-headless.cdk-deps.svc.cluster.local:9092"
     KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
     KAFKA_SASL_MECHANISM: "PLAIN"
