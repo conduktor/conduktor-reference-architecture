@@ -19,8 +19,8 @@ Components installed :
   - **Hashicorp Vault** to provide a KMS service
   - **Keycloak** OIDC server for SSO authentication
 - Conduktor platform :
-  - **Conduktor Console** in HA (2 instances) with Cortex sidecar
-  - **Conduktor Gateway** in HA (2 instances)
+  - **Conduktor Console** in HA (2 instances), plus Console Cortex (single instance)
+  - **Conduktor Gateway** in HA (3 instances)
 
 ## Prerequisites
 
@@ -75,8 +75,8 @@ Then, to install Conduktor Console and Gateway, run the following commands :
 make install-conduktor-platform
 ```
 
-It will deploy [`console-secrets`](local-stack/console-secrets.yaml) and [`gateway-secrets`](local-stack/gateway-secrets.yaml) into `conduktor` namespace and
-then install both Conduktor Console and Gateway latest helm charts using [`console-values`](local-stack/console-values.yaml) and [`gateway-values`](local-stack/console-values.yaml) files.
+It will deploy [`console-secrets`](console-secrets.yaml) and [`gateway-secrets`](gateway-secrets.yaml) into `conduktor` namespace and
+then install both Conduktor Console and Gateway latest helm charts using [`console-values`](console-values.yaml) and [`gateway-values`](gateway-values.yaml) files.
 
 ## Provision Conduktor platform using terraform
 
