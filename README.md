@@ -32,8 +32,11 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 #### High Availability
 
-- **Console**: Run at least 2 instances. Instances share the same PostgreSQL database and one of them is elected leader for indexing. Scale horizontally if needed. `conduktor-console-cortex` only supports a single instance.
-- **Gateway**: Run at least 3 instances. Scale horizontally if needed.
+Gateway and Console don't fail the same way. Gateway sits on the data path: when it's down, every application behind it loses Kafka. When Console is down, users lose the UI and the API, but Kafka traffic keeps flowing. Plan Gateway availability like Kafka's, not like a web application's.
+
+- **Gateway**: Run at least 3 instances and scale horizontally if needed. The chart prefers to place pods on different nodes but doesn't enforce it: set `topologySpreadConstraints` to spread them across availability zones. The chart doesn't create a PodDisruptionBudget, so add one with `extraDeploy` if your cluster drains nodes. Keep enough headroom to lose one instance at peak throughput. If you have librdkafka clients, set `GATEWAY_SHUTDOWN_DELAY_BETWEEN_BROKERS_MS` to `1000` or higher so rolling restarts don't crash them. See [Gateway on Kubernetes](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/kubernetes).
+- **Console**: Run at least 2 instances. Instances share the same PostgreSQL database and one of them is elected leader for indexing. Scale horizontally if needed.
+- **Console Cortex**: `conduktor-console-cortex` only supports a single instance. Losing it leaves a gap in Console metrics and alerts; it doesn't affect Kafka traffic. If you already run Prometheus, Mimir or Cortex, Console 1.38+ can use it [instead of Console Cortex](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-external-monitoring), which removes the only single-instance component.
 - **Redundancy**: Ensure redundancy for critical components such as databases and storage.
 
 #### Persistence
@@ -48,10 +51,14 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 #### Security
 
 - **TLS/SSL**: All Conduktor components should be exposed securely using TLS. The Console should be accessible via `https`, and the Gateway should use `https` for the admin API and `SASL_SSL` for Kafka clients. Certificates can be managed by [**cert-manager**](https://cert-manager.io/docs/).
+  - Terminate TLS on Console itself, not only on the ingress. Otherwise traffic between the ingress and Console is plain text, and SSO redirects built by Console can be rejected as insecure. See [Console on Kubernetes](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-console/kubernetes).
 - **Kubernetes Secrets**: Store all sensitive data (passwords, API tokens, access keys) using Kubernetes Secrets, ideally managed by a secret manager like Vault.
 - **SSO**: Create a root account on the Console with a strong password and use Single Sign-On (SSO) for user management. This reference recommends **OIDC** with discovery over **LDAP**.
 - **Kafka Authentication and Authorization**: Use `SASL_SSL` for Kafka authentication with mechanisms like `PLAIN`, `SCRAM-SHA-256`/`SCRAM-SHA-512`, `OAUTHBEARER`, `GSSAPI` (Kerberos) or `AWS_MSK_IAM`. For authorization, use ACLs with dedicated users for Conduktor Gateway and for Conduktor Console.
 - **Conduktor Gateway Authentication and Authorization**: For extra layer of security use Gateway managed mode security with Gateway ACLs and service accounts. Give each Gateway [listener](https://docs.conduktor.io/guide/tutorials/multi-listener) a single authentication method, for example `SSL` with `sslClientAuth: REQUIRE` (mTLS) on an internal listener and `SASL_SSL` on an external one, rather than requiring clients to present both a certificate and a SASL credential on the same endpoint. All SASL listeners share the same set of SASL mechanisms: you can't restrict one listener to `OAUTHBEARER` only.
+- **Gateway as the only path to Kafka**: Gateway ACLs and interceptors only apply to traffic that goes through Gateway. Restrict network access to the brokers and grant Kafka ACLs only to the Gateway and Console users, so applications can't connect to Kafka directly and skip the policies.
+- **One security mode per Gateway**: `GATEWAY_SECURITY_MODE` applies to all listeners of a Gateway deployment. You can't mix `GATEWAY_MANAGED` and `KAFKA_MANAGED`; if you need both, deploy separate Gateways.
+- **Gateway secrets**: Provide `GATEWAY_LICENSE_KEY` and `GATEWAY_USER_POOL_SECRET_KEY` (signs the credentials of local service accounts) from your secret manager. Replace the default admin API credentials (`admin`/`conduktor` in `GATEWAY_ADMIN_API_USERS`). See [Gateway environment variables](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/environment-variables).
 - **Pod/Container Security Context**: Run container with a non-root user, in non-privileged mode and use read-only filesystems where possible.
 
 #### Monitoring and Logging
@@ -66,7 +73,14 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 - **Database Backups**: Back up the Console PostgreSQL database regularly and before an upgrade.
   - We recommend using managed PostgreSQL backups for production environments. Or automate backups using tools like `pg_dump` or `pg_basebackup`.
-- **Storage Backups**: Ensure backups for the Cortex object storage bucket.
+- **Gateway configuration**: Gateway stores its interceptors, service accounts, ACLs and virtual clusters in compacted internal topics (`_conduktor_<GATEWAY_CLUSTER_ID>_*`) on the Kafka cluster it proxies. They aren't backed up anywhere else. Keep the Terraform or CLI definitions in Git as the source of truth, so you can re-apply them to a new cluster.
+- **Encryption keys**: If you use Gateway encryption, encrypted data stays readable only as long as its keys exist. Back up the KMS and never delete a key version that encrypted data you still keep. With the Gateway KMS (`gateway-kms://`), encrypted data keys are stored in `_conduktor_<GATEWAY_CLUSTER_ID>_encryption_keys`: losing that topic makes the data unreadable.
+- **Storage Backups**: The Cortex object storage bucket only holds metrics history. Back it up if you need that history, for example before upgrading Console.
+
+#### Upgrades
+
+- **Version policy**: Conduktor [supports each release for one calendar year](https://docs.conduktor.io/guide/support/supported-version-policy) and recommends [upgrading no more than two versions at a time](https://docs.conduktor.io/guide/support/upgrade-guide).
+- **Order**: Back up the Console database before upgrading Console. Upgrade Gateway with a rolling restart, one instance at a time.
 
 #### Performance and Scalability
 
@@ -75,8 +89,9 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 #### Networking
 
-- **Ingress Controller**: Use an Ingress controller (e.g., NGINX) to manage external access to the services.
-- **Load Balancer**: Deploy a load balancer to distribute traffic across multiple instances of the Console and Gateway.
+- **Ingress Controller**: Use an Ingress controller (e.g., NGINX) for HTTP traffic: the Console UI and API, and the Gateway admin API.
+- **Load Balancer**: Kafka clients reach Gateway through a layer 4 (TCP) load balancer, not an HTTP ingress. With SNI routing, the load balancer must pass TLS through to Gateway, which reads the hostname during the TLS handshake. See [Gateway load balancing](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/load-balancing).
+- **Client IP**: Behind a load balancer, Gateway audit logs and errors show the load balancer IP. Enable the HAProxy protocol (`GATEWAY_FEATURE_FLAGS_HAPROXY_PROTOCOL`) or set `externalTrafficPolicy: Local` on a `LoadBalancer` Service to [keep the client IP](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/load-balancing#capturing-the-client-ip-address).
 - [**SNI Routing**](https://docs.conduktor.io/guide/tutorials/sni-routing#set-up-sni-routing): Use SNI routing for Gateway to route traffic based on the hostname.
 
 #### Provisioning
