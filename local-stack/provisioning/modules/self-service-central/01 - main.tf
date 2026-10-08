@@ -16,29 +16,6 @@ locals {
   owner_apps_map = { for app in var.applications : app.owner => app }
 }
 
-resource "conduktor_console_topic_policy_v1" "generic-topic-policy" {
-  name = "generic-topic-policy"
-  spec = {
-    policies = {
-      "spec.configs.retention.ms" = {
-        range = {
-          optional = false
-          max      = 604800000
-          min      = 3600000
-        }
-      },
-      "spec.configs" = {
-        allowed_keys = {
-          keys = [
-            "retention.ms",
-            "cleanup.policy"
-          ]
-        }
-      }
-    }
-  }
-}
-
 resource "conduktor_console_resource_policy_v1" "generic-topic-resource-policy" {
   name = "generic-topic-resource-policy"
   spec = {
@@ -91,14 +68,9 @@ resource "conduktor_console_application_instance_v1" "app-instances" {
         pattern_type = "PREFIXED"
       }
     ]
-    topic_policy_ref = [
-      conduktor_console_topic_policy_v1.generic-topic-policy.name
-    ]
     policy_ref = [
       conduktor_console_resource_policy_v1.generic-topic-resource-policy.name
     ]
     application_managed_service_account = false
   }
 }
-
-
