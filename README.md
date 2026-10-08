@@ -6,18 +6,18 @@ This repository goal is to provide a **recommended architecture** for deploying 
 - Target is Kubernetes using Helm (directly or through CD like FluxCD/ArgoCD)
 - Kafka and Kubernetes are already setup and secured. 
   - Kubernetes components : Ingress controller / Load balancer / Storage class / Secret manager / cert-manager / ...
-- Available S3 storage for Conduktor Console
+- Available object storage for Conduktor Console Cortex
 - Available Postgres 13+ database for Conduktor Console
 - Basic knowledge in networking/docker/kubernetes/certificates/kafka
 - Need for maximum security
 - Need for High Availability
-- Sizing (cf dedicated section)
+- Sizing: see [sizing](./sizing.md)
 
 ## Out of scope 
 How to deploy/configure :
 - Kafka cluster
 - Kubernetes clusters with its components (ingress controller / load balancer / storage class / secret manager / ...) for production
-- S3 storage
+- Object storage
 - Postgres server and databases
 
 
@@ -32,8 +32,8 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 #### High Availability
 
-- **Console and Gateway**: Deploy in a high availability configuration with at least 2 instances of Console. Could be scaled horizontally if needed. Note that `conduktor-console-cortex` only supports a single instance.
-- **Gateway**: Deploy in a high availability configuration with 3 instances. Could be scaled horizontally if needed.
+- **Console**: Run at least 2 instances. Instances share the same PostgreSQL database and one of them is elected leader for indexing. Scale horizontally if needed. `conduktor-console-cortex` only supports a single instance.
+- **Gateway**: Run at least 3 instances. Scale horizontally if needed.
 - **Redundancy**: Ensure redundancy for critical components such as databases and storage.
 
 #### Persistence
@@ -43,15 +43,14 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
   - Conduktor **Gateway** doesn't use local storage itself, but some interceptors do. [Large message handling](https://docs.conduktor.io/guide/use-cases/manage-large-messages#local-disk-cache) offloads payloads to S3 or Azure Blob and keeps a local disk cache with no size limit: mount a persistent volume sized for the expected payload volume. The caching interceptor also writes to local disk. Large batch handling was removed in Gateway 3.21.
   - Conduktor **Console Cortex** uses a local volume as a working area before offloading metric blocks to **object storage**. Without object storage, all metrics are lost when the container restarts. Use a `ReadWriteOnce` persistent volume with `updateStrategy: Recreate`, never `ReadWriteMany`. See [Cortex deployment](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-cortex).
 - **Database**: Use a managed PostgreSQL database with high availability and backups. For self-hosted databases, use a PostgreSQL cluster with replication and backups.
-  - Console main database should start with a minimum of 10 GB and can be increased based on usage (number of users/groups/Kafka clusters, topics and consumer groups).
-  - Optional Console SQL database should start with a minimum of 10 GB and can be increased based on usage (number of topics to index and retention period).
+  - The Console database should start with a minimum of 10 GB and can be increased based on usage (number of users/groups/Kafka clusters, topics and consumer groups).
 
 #### Security
 
 - **TLS/SSL**: All Conduktor components should be exposed securely using TLS. The Console should be accessible via `https`, and the Gateway should use `https` for the admin API and `SASL_SSL` for Kafka clients. Certificates can be managed by [**cert-manager**](https://cert-manager.io/docs/).
 - **Kubernetes Secrets**: Store all sensitive data (passwords, API tokens, access keys) using Kubernetes Secrets, ideally managed by a secret manager like Vault.
 - **SSO**: Create a root account on the Console with a strong password and use Single Sign-On (SSO) for user management. This reference recommends **OIDC** with discovery over **LDAP**.
-- **Kafka Authentication and Authorization**: Use `SASL_SSL` for Kafka authentication with mechanisms like `PLAIN`, `SCRAM-SHA-256`/`SCRAM-SHA-512`, `OAUTHBEARER`, `GSSAPI` (Kerberos) or `AWS_MSK_IAM`. For authorization, use ACLs with a dedicated user for Conduktor Gateway.
+- **Kafka Authentication and Authorization**: Use `SASL_SSL` for Kafka authentication with mechanisms like `PLAIN`, `SCRAM-SHA-256`/`SCRAM-SHA-512`, `OAUTHBEARER`, `GSSAPI` (Kerberos) or `AWS_MSK_IAM`. For authorization, use ACLs with dedicated users for Conduktor Gateway and for Conduktor Console.
 - **Conduktor Gateway Authentication and Authorization**: For extra layer of security use Gateway managed mode security with Gateway ACLs and service accounts. Give each Gateway [listener](https://docs.conduktor.io/guide/tutorials/multi-listener) a single authentication method, for example `SSL` with `sslClientAuth: REQUIRE` (mTLS) on an internal listener and `SASL_SSL` on an external one, rather than requiring clients to present both a certificate and a SASL credential on the same endpoint. All SASL listeners share the same set of SASL mechanisms: you can't restrict one listener to `OAUTHBEARER` only.
 - **Pod/Container Security Context**: Run container with a non-root user, in non-privileged mode and use read-only filesystems where possible.
 
@@ -65,25 +64,20 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 #### Backup and Recovery
 
-- **Database Backups**: Back up Console PostgreSQL databases regularly and before an upgrade. 
+- **Database Backups**: Back up the Console PostgreSQL database regularly and before an upgrade.
   - We recommend using managed PostgreSQL backups for production environments. Or automate backups using tools like `pg_dump` or `pg_basebackup`.
 - **Storage Backups**: Ensure backups for the Cortex object storage bucket.
 
 #### Performance and Scalability
 
 - **Resource Requests and Limits**: Define resource requests and limits for all components to ensure proper resource allocation and prevent resource contention. See [sizing](./sizing.md) for more details.
-- **Main Database Sizing**: Size the main PostgreSQL database based on the expected data volume and usage (numbers of users/groups, Kafka clusters, topics and consumer group). See [sizing](./sizing.md) for more details.
-- **SQL Database Sizing**: Size the SQL PostgreSQL database based on the expected usage of the SQL feature and size of topics to index for given retention period. See [sizing](./sizing.md) for more details.
+- **Database Sizing**: Size the Console PostgreSQL database based on the expected data volume and usage (numbers of users/groups, Kafka clusters, topics and consumer group). See [sizing](./sizing.md) for more details.
 
 #### Networking
 
 - **Ingress Controller**: Use an Ingress controller (e.g., NGINX) to manage external access to the services.
 - **Load Balancer**: Deploy a load balancer to distribute traffic across multiple instances of the Console and Gateway.
 - [**SNI Routing**](https://docs.conduktor.io/guide/tutorials/sni-routing#set-up-sni-routing): Use SNI routing for Gateway to route traffic based on the hostname.
-
-#### Auditing
-
-- **Audit Logs**: Enable export of audit logs to [Kafka topics](https://docs.conduktor.io/guide/tutorials/configure-audit-log-topic) to track user activity.
 
 #### Provisioning
 
@@ -94,11 +88,9 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 - **PostgreSQL**: Use PostgreSQL 13+ as the database for Conduktor Console with **TLS**, **HA** and backup in place.
 - **Object Storage**: Use object storage for Conduktor Console Cortex: AWS S3 or S3-compatible (e.g., MinIO), GCS, Azure Blob Storage or Swift.
-- **Kafka**: Use Kafka 2.7.0+ and ensure that it is configured and secured with the necessary authentication and authorization mechanisms. With a dedicated user for Conduktor Gateway that can at minimum manage topic/consumer group/commit offsets and describe cluster.
+- **Kafka**: Use Kafka 2.7.0+ and ensure that it is configured and secured with the necessary authentication and authorization mechanisms. Create a dedicated user for Conduktor Gateway with the [ACLs it needs](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/connect-to-kafka) on its internal topics, consumer group and the topics it proxies. Create another one for Conduktor Console with the [required Kafka permissions](https://docs.conduktor.io/guide/conduktor-in-production/admin/configure-clusters#required-kafka-permissions).
 - **OIDC Provider**: Use an OIDC provider for Single Sign-On (SSO) with Conduktor Console.
 - **KMS**: Use a Key Management Service (HashiCorp Vault, AWS KMS, Azure Key Vault, GCP KMS or Fortanix) for [Gateway encryption and decryption](https://docs.conduktor.io/guide/reference/data-security#kms-configuration) of Kafka messages. The in-memory KMS is for testing only.
-
-By following these recommendations and requirements, you can ensure a robust, secure, and scalable production environment for the Conduktor platform.
 
 ### Examples
 - [**Local Stack**](local-stack/README.md): Local stack for Conduktor platform with all components deployed in a K3D cluster.
