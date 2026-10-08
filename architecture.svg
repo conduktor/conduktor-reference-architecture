@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 790" width="1200" height="790" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+<title>Conduktor Platform reference architecture</title>
+<style>
+.t{font-size:13px;font-weight:600;fill:#0f172a}
+.s{font-size:11.5px;fill:#64748b}
+.g{font-size:10.5px;font-weight:600;letter-spacing:.08em;fill:#64748b}
+.e{font-size:11px;font-weight:500}
+.badge{font-size:10.5px;font-weight:600;fill:#0e9f6e}
+.lg{font-size:11.5px;fill:#64748b}
+</style>
+<defs>
+<symbol id="i-apps" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></g></symbol>
+<symbol id="i-terminal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></g></symbol>
+<symbol id="i-lb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v10M12 12H5v5M12 12h7v5"/></g></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></g></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></g></symbol>
+<symbol id="i-window" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M6.5 6.5h.01M9.5 6.5h.01"/></g></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M6 16v-4M10 16V8M14 16v-6M18 16V5"/></g></symbol>
+<symbol id="i-kafka" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="2.5"/><circle cx="9" cy="4" r="2"/><circle cx="9" cy="20" r="2"/><circle cx="17" cy="8" r="2"/><circle cx="17" cy="16" r="2"/><path d="M9 6v3.5M9 14.5V18M11.2 10.8l4-2M11.2 13.2l4 2"/></g></symbol>
+<symbol id="i-server" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></g></symbol>
+<symbol id="i-db" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></g></symbol>
+<symbol id="i-bucket" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="2.5"/><path d="M4 6l2 13c.2 1.2 2.8 2 6 2s5.8-.8 6-2l2-13"/></g></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></g></symbol>
+<symbol id="i-id" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2 3-2s2.4.5 3 2M14 10h4M14 14h3"/></g></symbol>
+<symbol id="i-braces" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-1"/></g></symbol>
+<symbol id="i-cert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M9 13.5L8 21l4-2 4 2-1-7.5"/></g></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></g></symbol>
+<symbol id="i-logs" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></g></symbol>
+<symbol id="i-k8s" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l7.4 3.6 1.8 8-5.1 6.4H7.9l-5.1-6.4 1.8-8z"/><circle cx="12" cy="12" r="2.2"/><path d="M12 6v3.8M12 14.2V18M6.6 9.8l3.3 1.4M17.4 9.8l-3.3 1.4M8.5 16.5l2.2-2.6M15.5 16.5l-2.2-2.6"/></g></symbol>
+<marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#0f172a"/></marker>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#2563eb"/></marker>
+<marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#94a3b8"/></marker>
+</defs>
+<rect width="1200" height="790" fill="#fff"/>
+<g transform="translate(0,-70)">
+<path d="M40,102 L70,102" fill="none" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ak)"/>
+<text x="80" y="106" class="lg">Kafka protocol</text>
+<path d="M190,102 L220,102" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="230" y="106" class="lg">HTTPS</text>
+<path d="M295,102 L325,102" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#am)"/>
+<text x="335" y="106" class="lg">Metrics</text>
+<rect x="420" y="95" width="30" height="14" rx="3" fill="#fff" stroke="#0e9f6e" stroke-width="1.3"/>
+<text x="460" y="106" class="lg">Conduktor</text>
+<rect x="540" y="95" width="30" height="14" rx="3" fill="#fff" stroke="#cbd5e1" stroke-width="1.3"/>
+<text x="580" y="106" class="lg">Pre-existing</text>
+<rect x="670" y="95" width="30" height="14" rx="3" fill="#fff" stroke="#cbd5e1" stroke-width="1.3" stroke-dasharray="4 3"/>
+<text x="710" y="106" class="lg">Optional</text>
+<rect x="300" y="128" width="540" height="484" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+<use xlink:href="#i-k8s" x="314" y="137" width="15" height="15" color="#64748b"/>
+<text x="335" y="149" class="g">KUBERNETES  ·  namespace conduktor</text>
+<rect x="880" y="224" width="280" height="276" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+<use xlink:href="#i-kafka" x="894" y="233" width="15" height="15" color="#64748b"/>
+<text x="915" y="245" class="g">KAFKA CLUSTER</text>
+<text x="40" y="182" class="g">DATA PATH</text>
+<rect x="40" y="192" width="200" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="50" y="204.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-apps" x="56" y="210.0" width="20" height="20" color="#64748b"/>
+<text x="94" y="217.0" class="t">Kafka applications</text>
+<text x="94" y="233.0" class="s">producers, consumers</text>
+<text x="40" y="386" class="g">MANAGEMENT PATH</text>
+<rect x="40" y="396" width="200" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="50" y="408.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-terminal" x="56" y="414.0" width="20" height="20" color="#64748b"/>
+<text x="94" y="421.0" class="t">Automation</text>
+<text x="94" y="437.0" class="s">Terraform, CLI, GitOps</text>
+<rect x="40" y="468" width="200" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="50" y="480.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-user" x="56" y="486.0" width="20" height="20" color="#64748b"/>
+<text x="94" y="493.0" class="t">Platform users</text>
+<text x="94" y="509.0" class="s">browser, SSO</text>
+<rect x="340" y="192" width="240" height="56" rx="4" fill="#fff" stroke="#0e9f6e" stroke-width="1.5"/>
+<rect x="350" y="204.0" width="32" height="32" rx="4" fill="#ecfdf5"/>
+<use xlink:href="#i-shield" x="356" y="210.0" width="20" height="20" color="#0e9f6e"/>
+<text x="394" y="217.0" class="t">Conduktor Gateway</text>
+<text x="394" y="233.0" class="s">stateless</text>
+<rect x="546" y="200" width="26" height="16" rx="3" fill="#ecfdf5"/>
+<text x="559.0" y="212" class="badge" text-anchor="middle">×3</text>
+<rect x="340" y="432" width="240" height="56" rx="4" fill="#fff" stroke="#0e9f6e" stroke-width="1.5"/>
+<rect x="350" y="444.0" width="32" height="32" rx="4" fill="#ecfdf5"/>
+<use xlink:href="#i-window" x="356" y="450.0" width="20" height="20" color="#0e9f6e"/>
+<text x="394" y="457.0" class="t">Conduktor Console</text>
+<text x="394" y="473.0" class="s">UI, API, self-service</text>
+<rect x="546" y="440" width="26" height="16" rx="3" fill="#ecfdf5"/>
+<text x="559.0" y="452" class="badge" text-anchor="middle">×2</text>
+<rect x="613" y="520" width="204" height="56" rx="4" fill="#fff" stroke="#0e9f6e" stroke-width="1.5"/>
+<rect x="623" y="532.0" width="32" height="32" rx="4" fill="#ecfdf5"/>
+<use xlink:href="#i-chart" x="629" y="538.0" width="20" height="20" color="#0e9f6e"/>
+<text x="667" y="545.0" class="t">Console Cortex</text>
+<text x="667" y="561.0" class="s">metrics store</text>
+<rect x="783" y="528" width="26" height="16" rx="3" fill="#ecfdf5"/>
+<text x="796.0" y="540" class="badge" text-anchor="middle">×1</text>
+<rect x="880" y="150" width="280" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+<rect x="890" y="162.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-key" x="896" y="168.0" width="20" height="20" color="#64748b"/>
+<text x="934" y="175.0" class="t">KMS</text>
+<text x="934" y="191.0" class="s">Vault, AWS, Azure, GCP</text>
+<rect x="896" y="256" width="248" height="48" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="906" y="264.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-server" x="912" y="270.0" width="20" height="20" color="#64748b"/>
+<text x="950" y="284.0" class="t">broker-0</text>
+<rect x="896" y="316" width="248" height="48" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="906" y="324.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-server" x="912" y="330.0" width="20" height="20" color="#64748b"/>
+<text x="950" y="344.0" class="t">broker-1</text>
+<rect x="896" y="376" width="248" height="48" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="906" y="384.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-server" x="912" y="390.0" width="20" height="20" color="#64748b"/>
+<text x="950" y="404.0" class="t">broker-2</text>
+<text x="896" y="456" class="s">+ Gateway internal topics</text>
+<text x="896" y="474" class="s">+ audit log topics</text>
+<rect x="880" y="624" width="280" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+<rect x="890" y="636.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-braces" x="896" y="642.0" width="20" height="20" color="#64748b"/>
+<text x="934" y="649.0" class="t">Schema Registry</text>
+<text x="934" y="665.0" class="s">Confluent-compatible</text>
+<rect x="80" y="680" width="160" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="90" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-id" x="96" y="698.0" width="20" height="20" color="#64748b"/>
+<text x="134" y="705.0" class="t">Identity provider</text>
+<text x="134" y="721.0" class="s">OIDC</text>
+<rect x="290" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="300" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-db" x="306" y="698.0" width="20" height="20" color="#64748b"/>
+<text x="344" y="705.0" class="t">PostgreSQL</text>
+<text x="344" y="721.0" class="s">main database</text>
+<rect x="465" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+<rect x="475" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-db" x="481" y="698.0" width="20" height="20" color="#64748b"/>
+<text x="519" y="705.0" class="t">PostgreSQL</text>
+<text x="519" y="721.0" class="s">SQL database</text>
+<rect x="640" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="650" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-bucket" x="656" y="698.0" width="20" height="20" color="#64748b"/>
+<text x="694" y="705.0" class="t">Object storage</text>
+<text x="694" y="721.0" class="s">S3, GCS, Azure</text>
+<path d="M240,220 L338,220" fill="none" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="240.6" y="201" width="56.8" height="15" fill="#fff"/>
+<text x="269" y="212" class="e" fill="#0f172a" text-anchor="middle">SASL_SSL</text>
+<path d="M580,236 L878,236" fill="none" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="681.6" y="241" width="56.8" height="15" fill="#f8fafc"/>
+<text x="710" y="252" class="e" fill="#0f172a" text-anchor="middle">SASL_SSL</text>
+<path d="M580,204 L850,204 L850,178 L878,178" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="660.2" y="185" width="99.5" height="15" fill="#f8fafc"/>
+<text x="710" y="196" class="e" fill="#2563eb" text-anchor="middle">encryption keys</text>
+<path d="M240,410 L280,410 L280,236 L338,236" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="213.1" y="311" width="62.9" height="15" fill="#fff"/>
+<text x="272" y="322" class="e" fill="#2563eb" text-anchor="end">admin API</text>
+<path d="M240,444 L338,444" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M240,478 L338,478" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M420,432 L420,250" fill="none" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="322.6" y="329" width="93.4" height="15" fill="#f8fafc"/>
+<text x="412" y="340" class="e" fill="#0f172a" text-anchor="end">Kafka over TLS</text>
+<path d="M500,432 L500,250" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="504.0" y="329" width="62.9" height="15" fill="#f8fafc"/>
+<text x="508" y="340" class="e" fill="#2563eb" text-anchor="start">admin API</text>
+<path d="M580,448 L878,448" fill="none" stroke="#0f172a" stroke-width="1.5" marker-end="url(#ak)"/>
+<rect x="657.2" y="429" width="105.6" height="15" fill="#f8fafc"/>
+<text x="710" y="440" class="e" fill="#0f172a" text-anchor="middle">SASL_SSL, direct</text>
+<path d="M580,472 L856,472 L856,652 L878,652" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M540,490 L540,548 L611,548" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-start="url(#am)" marker-end="url(#am)"/>
+<path d="M460,488 V632 M160,632 H540" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+<path d="M160,632 L160,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M365,632 L365,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M540,632 L540,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="219.8" y="617" width="160.5" height="15" fill="#fff"/>
+<text x="300" y="628" class="e" fill="#2563eb" text-anchor="middle">OIDC, PostgreSQL over TLS</text>
+<path d="M715,576 L715,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="692.7" y="629" width="44.6" height="15" fill="#fff"/>
+<text x="715" y="640" class="e" fill="#2563eb" text-anchor="middle">S3 API</text>
+<rect x="40" y="776" width="1120" height="56" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="56" y="809" class="g">CLUSTER PREREQUISITES</text>
+<use xlink:href="#i-globe" x="236" y="794" width="20" height="20" color="#64748b"/>
+<text x="266" y="801" class="t">Networking</text>
+<text x="266" y="817" class="s">ingress, load balancer</text>
+<use xlink:href="#i-cert" x="422" y="794" width="20" height="20" color="#64748b"/>
+<text x="452" y="801" class="t">cert-manager</text>
+<text x="452" y="817" class="s">TLS certificates</text>
+<use xlink:href="#i-lock" x="608" y="794" width="20" height="20" color="#64748b"/>
+<text x="638" y="801" class="t">Secret manager</text>
+<text x="638" y="817" class="s">Vault, External Secrets</text>
+<use xlink:href="#i-pulse" x="794" y="794" width="20" height="20" color="#64748b"/>
+<text x="824" y="801" class="t">Monitoring</text>
+<text x="824" y="817" class="s">Prometheus, Grafana</text>
+<use xlink:href="#i-logs" x="980" y="794" width="20" height="20" color="#64748b"/>
+<text x="1010" y="801" class="t">Central logging</text>
+<text x="1010" y="817" class="s">JSON logs</text>
+</g>
+</svg>
