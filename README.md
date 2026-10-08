@@ -24,7 +24,7 @@ How to deploy/configure :
 ## General Recommended Architecture
 
 Following diagram shows the general architecture of Conduktor platform and the required and optional components needed to deploy it in a production ready environment.
-![Conduktor platform architecture](./.excalidraw.svg)
+![Conduktor platform reference architecture](./architecture.svg)
 
 ### Recommended/target production environment
 
