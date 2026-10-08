@@ -43,7 +43,7 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
   - Conduktor **Gateway** doesn't use local storage itself, but some interceptors do. [Large message handling](https://docs.conduktor.io/guide/use-cases/manage-large-messages#local-disk-cache) offloads payloads to S3 or Azure Blob and keeps a local disk cache with no size limit: mount a persistent volume sized for the expected payload volume. The caching interceptor also writes to local disk. Large batch handling was removed in Gateway 3.21.
   - Conduktor **Console Cortex** uses a local volume as a working area before offloading metric blocks to **object storage**. Without object storage, all metrics are lost when the container restarts. Use a `ReadWriteOnce` persistent volume with `updateStrategy: Recreate`, never `ReadWriteMany`. See [Cortex deployment](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-cortex).
 - **Database**: Use a managed PostgreSQL database with high availability and backups. For self-hosted databases, use a PostgreSQL cluster with replication and backups.
-  - The Console database should start with a minimum of 10 GB and can be increased based on usage (number of users/groups/Kafka clusters, topics and consumer groups).
+  - Size the Console database with the [PostgreSQL sizing guide](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-console/postgres-sizing). 10 GB only fits a proof of concept; production starts at 50 GB and grows with users, Kafka clusters, topics and consumer groups.
 
 #### Security
 
@@ -86,7 +86,7 @@ The primary deployment target for the Conduktor platform is **Kubernetes** using
 
 #### Dependencies
 
-- **PostgreSQL**: Use PostgreSQL 13+ as the database for Conduktor Console with **TLS**, **HA** and backup in place.
+- **PostgreSQL**: Use PostgreSQL 13+ (14.8+ or 15.3+ on AWS RDS and Aurora) as the database for Conduktor Console with **TLS**, **HA** and backup in place.
 - **Object Storage**: Use object storage for Conduktor Console Cortex: AWS S3 or S3-compatible (e.g., MinIO), GCS, Azure Blob Storage or Swift.
 - **Kafka**: Use Kafka 2.7.0+ and ensure that it is configured and secured with the necessary authentication and authorization mechanisms. Create a dedicated user for Conduktor Gateway with the [ACLs it needs](https://docs.conduktor.io/guide/conduktor-in-production/deploy-artifacts/deploy-gateway/connect-to-kafka) on its internal topics, consumer group and the topics it proxies. Create another one for Conduktor Console with the [required Kafka permissions](https://docs.conduktor.io/guide/conduktor-in-production/admin/configure-clusters#required-kafka-permissions).
 - **OIDC Provider**: Use an OIDC provider for Single Sign-On (SSO) with Conduktor Console.
