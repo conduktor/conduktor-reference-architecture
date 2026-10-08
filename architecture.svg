@@ -120,16 +120,11 @@
 <use xlink:href="#i-id" x="96" y="698.0" width="20" height="20" color="#64748b"/>
 <text x="134" y="705.0" class="t">Identity provider</text>
 <text x="134" y="721.0" class="s">OIDC</text>
-<rect x="290" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
-<rect x="300" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
-<use xlink:href="#i-db" x="306" y="698.0" width="20" height="20" color="#64748b"/>
-<text x="344" y="705.0" class="t">PostgreSQL</text>
-<text x="344" y="721.0" class="s">main database</text>
-<rect x="465" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
-<rect x="475" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
-<use xlink:href="#i-db" x="481" y="698.0" width="20" height="20" color="#64748b"/>
-<text x="519" y="705.0" class="t">PostgreSQL</text>
-<text x="519" y="721.0" class="s">SQL database</text>
+<rect x="370" y="680" width="180" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="380" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
+<use xlink:href="#i-db" x="386" y="698.0" width="20" height="20" color="#64748b"/>
+<text x="424" y="705.0" class="t">PostgreSQL</text>
+<text x="424" y="721.0" class="s">Console database</text>
 <rect x="640" y="680" width="150" height="56" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="1.2"/>
 <rect x="650" y="692.0" width="32" height="32" rx="4" fill="#f1f5f9"/>
 <use xlink:href="#i-bucket" x="656" y="698.0" width="20" height="20" color="#64748b"/>
@@ -160,10 +155,9 @@
 <text x="710" y="440" class="e" fill="#0f172a" text-anchor="middle">SASL_SSL, direct</text>
 <path d="M580,472 L856,472 L856,652 L878,652" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
 <path d="M540,490 L540,548 L611,548" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-start="url(#am)" marker-end="url(#am)"/>
-<path d="M460,488 V632 M160,632 H540" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+<path d="M460,488 V632 M160,632 H460" fill="none" stroke="#2563eb" stroke-width="1.5"/>
 <path d="M160,632 L160,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
-<path d="M365,632 L365,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
-<path d="M540,632 L540,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
+<path d="M460,632 L460,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>
 <rect x="219.8" y="617" width="160.5" height="15" fill="#fff"/>
 <text x="300" y="628" class="e" fill="#2563eb" text-anchor="middle">OIDC, PostgreSQL over TLS</text>
 <path d="M715,576 L715,678" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ah)"/>

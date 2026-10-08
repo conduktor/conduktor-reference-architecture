@@ -153,8 +153,7 @@ node(880, 624, 280, 56, "braces", "Schema Registry", "Confluent-compatible", opt
 
 # Dependencies
 node(80, 680, 160, 56, "id", "Identity provider", "OIDC")
-node(290, 680, 150, 56, "db", "PostgreSQL", "main database")
-node(465, 680, 150, 56, "db", "PostgreSQL", "SQL database", opt=True)
+node(370, 680, 180, 56, "db", "PostgreSQL", "Console database")
 node(640, 680, 150, 56, "bucket", "Object storage", "S3, GCS, Azure")
 
 # Data path
@@ -180,8 +179,8 @@ edge([(580, 472), (856, 472), (856, 652), (878, 652)], "https")
 edge([(540, 490), (540, 548), (611, 548)], "metrics", both=True)
 
 # Console and Cortex dependencies
-w(f'<path d="M460,488 V632 M160,632 H540" fill="none" stroke="{HTTPS}" stroke-width="1.5"/>')
-for x in (160, 365, 540):
+w(f'<path d="M460,488 V632 M160,632 H460" fill="none" stroke="{HTTPS}" stroke-width="1.5"/>')
+for x in (160, 460):
     edge([(x, 632), (x, 678)], "https")
 label(300, 628, "OIDC, PostgreSQL over TLS", "https")
 edge([(715, 576), (715, 678)], "https")
