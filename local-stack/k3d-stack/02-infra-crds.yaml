@@ -44,7 +44,7 @@ spec:
 # them all via the bootstrap selfsigned-issuer.
 #
 #   kafka-stack-ca  : signs kafka brokers + schema-registry
-#   ext-services-ca : signs keycloak, PG (main + sql), s3-minio (and Vault later)
+#   ext-services-ca : signs keycloak, PG (main + sql), S3 (RustFS) (and Vault later)
 #   conduktor-ca    : signs Console server, Gateway listener, Console client certs
 ---
 apiVersion: cert-manager.io/v1
@@ -181,10 +181,10 @@ spec:
   secretName: s3-crt-secret
   subject:
     organizations:
-      - s3-minio
-  commonName: s3-minio.cdk-deps.svc.cluster.local
+      - s3
+  commonName: s3.cdk-deps.svc.cluster.local
   dnsNames:
-    - s3-minio.cdk-deps.svc.cluster.local
+    - s3.cdk-deps.svc.cluster.local
   issuerRef:
     name: ext-services-issuer
     kind: ClusterIssuer
