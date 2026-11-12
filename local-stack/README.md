@@ -16,6 +16,7 @@ Components installed :
     - Main database for Conduktor Console data
     - Optional SQL database for Conduktor Console SQL feature
   - **Kafka** cluster with 3 brokers
+  - **RustFS** S3 storage (TLS) for Console Cortex metrics
   - **Hashicorp Vault** to provide a KMS service
   - **Keycloak** OIDC server for SSO authentication
 - Conduktor platform :
@@ -57,7 +58,7 @@ To create and start the local environment, run the following commands :
 make start-local-stack
 ```
 
-It will create a K3d cluster named k3d-conduktor-platform-p75 and install base components (Ingress controller, Cert-manager, Monitoring stack, Postgresql databases, Kafka cluster, Vault).
+It will create a K3d cluster named k3d-conduktor-platform-p75 and install base components (Ingress controller, Cert-manager, Monitoring stack, Postgresql databases, RustFS S3 storage, Kafka cluster, Vault).
 Kubectl context should be created. To use it, run
 
 ```bash
@@ -240,6 +241,16 @@ kubectl port-forward svc/grafana-service -n monitoring 3000:3000
 Go to [http://localhost:3000](http://localhost:3000) and log in with `admin` and `admin` for username, password to explore the dashboards that ship with the Conduktor helm charts.
 
 Press `Ctrl+C` to kill the port forward.
+
+### S3 storage
+
+Port forward the RustFS web console to browse the Cortex metrics bucket.
+
+```bash
+kubectl port-forward svc/s3 -n cdk-deps 9001:9001
+```
+
+Go to [https://localhost:9001](https://localhost:9001) (self-signed certificate warning expected) and log in with `admin` / `conduktor`.
 
 ## Destroy Conduktor platform local stack
 

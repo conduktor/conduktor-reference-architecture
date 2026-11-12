@@ -43,7 +43,7 @@ waitSecretCreated conduktor client-sa-client-crt-secret
 echo
 echo "03 - Installing Conduktor dependencies components"
 kubectl apply -f ${STACK_DIR}/03-components/postgresql.yaml
-kubectl apply -f ${STACK_DIR}/03-components/s3-minio.yaml
+kubectl apply -f ${STACK_DIR}/03-components/s3-rustfs.yaml
 kubectl apply -f ${STACK_DIR}/03-components/kafka.yaml
 kubectl apply -f ${STACK_DIR}/03-components/monitoring.yaml
 kubectl apply -f ${STACK_DIR}/03-components/vault.yaml
@@ -53,7 +53,7 @@ kubectl apply -f ${STACK_DIR}/03-components/keycloak.yaml
 echo
 echo "Waiting for dependencies to be ready"
 waitRollout cdk-deps sts/main-postgresql
-#waitAvailable cdk-deps deployment/s3-minio
+waitAvailable cdk-deps deployment/s3-rustfs
 waitRollout cdk-deps sts/kafka-controller
 
 kubectl apply -f ${STACK_DIR}/03-components/schema-registry.yaml

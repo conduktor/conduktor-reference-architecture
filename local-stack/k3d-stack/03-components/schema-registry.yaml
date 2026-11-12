@@ -1,6 +1,6 @@
 # Install components need by Conduktor Console and or Gateway
 # Require infra and infra CRDs to be installed first
-# Install a Postgres database, a Minio S3 storage, Prometheus and Vault
+# Install a Postgres database, a RustFS S3 storage, Prometheus and Vault
 ---
 apiVersion: v1
 kind: Secret

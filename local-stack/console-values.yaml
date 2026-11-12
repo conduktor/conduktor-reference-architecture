@@ -141,9 +141,9 @@ monitoringConfig:
     skipSSLCheck: false # Console CA automatically mounted from config.platform.https.existingSecret
   storage:
     s3:
-      endpoint: "s3-minio.cdk-deps.svc.cluster.local:9000" # Internal endpoint
+      endpoint: "s3.cdk-deps.svc.cluster.local:9000" # Internal endpoint
       bucket: "conduktor-monitoring"
-      insecure: true # TODO use TLS
+      insecure: false # HTTPS, server cert signed by ext-services-ca
 
 platformCortex:
   enabled: true
@@ -161,28 +161,20 @@ platformCortex:
     runAsUser: 10001
     runAsGroup: 0
 
-
-# TODO enable TLS on S3 endpoint
-#  extraVolumes:
-#    - name: cortex-config-override
-#      configMap:
-#       name: conduktor-console-cortex-config
-#  extraVolumeMounts:
-#    - name: cortex-config-override
-#      subPath: cortex.yaml # key in configmap to use as file contents
-#      mountPath: /opt/override-configs/cortex.yaml # path to file in Cortex container
-
-#extraDeploy:
-#    - apiVersion: v1
-#      kind: ConfigMap
-#      metadata:
-#        name: conduktor-console-cortex-config
-#        namespace: conduktor
-#      data:
-#        cortex.yaml: |
-#          blocks_storage:
-#            tsdb:
-#              retention_period: 24h
-#            s3:
-#              http:
-#                insecure_skip_verify: true
+  # Cortex (1.21) S3 client has no CA option, only insecure_skip_verify, and no
+  # CDK_MONITORING_*/CORTEX_* variable covers it. Add ext-services-ca to the Go
+  # system trust instead (SSL_CERT_DIR), on top of the image's SSL_CERT_FILE.
+  extraEnvVars:
+    - name: SSL_CERT_DIR
+      value: "/opt/conduktor/s3-trust"
+  extraVolumes:
+    - name: s3-trust
+      secret:
+        secretName: ext-services-trust
+        items:
+          - key: ca-bundle.pem
+            path: ca-bundle.pem
+  extraVolumeMounts:
+    - name: s3-trust
+      mountPath: /opt/conduktor/s3-trust
+      readOnly: true

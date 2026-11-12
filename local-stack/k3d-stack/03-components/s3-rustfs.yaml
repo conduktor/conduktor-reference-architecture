@@ -1,0 +1,166 @@
+# Install components need by Conduktor Console and or Gateway
+# Require infra and infra CRDs to be installed first
+# Single-node RustFS S3 storage (Console Cortex metrics) served over TLS with
+# the cert-manager s3-crt-secret. Plain manifests rather than the RustFS chart:
+# the chart only terminates S3 TLS at the Ingress, not on the server itself.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-credentials
+  namespace: cdk-deps
+type: Opaque
+stringData:
+  access-key: "admin"
+  secret-key: "conduktor"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s3-rustfs
+  namespace: cdk-deps
+  labels:
+    app: s3-rustfs
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: s3-rustfs
+  template:
+    metadata:
+      labels:
+        app: s3-rustfs
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:1.0.4
+          env:
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: s3-credentials
+                  key: access-key
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: s3-credentials
+                  key: secret-key
+            - name: RUSTFS_TLS_PATH
+              value: /opt/tls
+            - name: RUSTFS_OBS_LOG_DIRECTORY
+              value: ""
+          ports:
+            - name: s3
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: s3
+              scheme: HTTPS
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: s3
+              scheme: HTTPS
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tls
+              mountPath: /opt/tls
+              readOnly: true
+      volumes:
+        - name: data
+          emptyDir: {}
+        # RustFS only loads these exact file names from RUSTFS_TLS_PATH
+        - name: tls
+          secret:
+            secretName: s3-crt-secret
+            defaultMode: 0440
+            items:
+              - key: tls.crt
+                path: rustfs_cert.pem
+              - key: tls.key
+                path: rustfs_key.pem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Implementation-agnostic name, so clients and s3-crt survive a backend swap
+  name: s3
+  namespace: cdk-deps
+spec:
+  selector:
+    app: s3-rustfs
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+    - name: console
+      port: 9001
+      targetPort: console
+---
+# Retries until RustFS is up; idempotent so the manifest can be re-applied.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: s3-rustfs-create-buckets
+  namespace: cdk-deps
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: create-buckets
+          image: amazon/aws-cli:2.39.7
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: s3-credentials
+                  key: access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: s3-credentials
+                  key: secret-key
+            - name: AWS_REGION
+              value: us-east-1
+            - name: AWS_ENDPOINT_URL
+              value: https://s3.cdk-deps.svc.cluster.local:9000
+            - name: AWS_CA_BUNDLE
+              value: /opt/trust/ca-bundle.pem
+            - name: HOME
+              value: /tmp
+            - name: BUCKET
+              value: conduktor-monitoring
+          command: ["sh", "-c"]
+          args:
+            - aws s3api head-bucket --bucket "$BUCKET" || aws s3api create-bucket --bucket "$BUCKET"
+          volumeMounts:
+            - name: trust
+              mountPath: /opt/trust
+              readOnly: true
+      volumes:
+        - name: trust
+          secret:
+            secretName: ext-services-trust
